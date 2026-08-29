@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mode B: Image Sequence Frame Scrubber</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #f8fafc;
+      background: #020617;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    #sequence-canvas {
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
+    }
+    .scroll-container { position: relative; z-index: 10; pointer-events: none; }
+    .scroll-section {
+      min-height: 100vh; display: flex; align-items: center; padding: 6rem 8%;
+    }
+    .scroll-section:nth-child(odd) { justify-content: flex-start; }
+    .scroll-section:nth-child(even) { justify-content: flex-end; }
+    .scroll-section:first-child {
+      justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 15vh;
+    }
+    .glass-card {
+      max-width: 520px; padding: 2.5rem;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+      opacity: 0; transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card.is-visible { opacity: 1; transform: translateY(0); }
+    .glass-card h1, .glass-card h2 {
+      font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.15; margin-bottom: 0.8rem; color: #ffffff;
+    }
+    .glass-card p { font-size: 1.1rem; line-height: 1.7; color: #94a3b8; }
+    .badge {
+      display: inline-block; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 999px; margin-bottom: 1rem;
+    }
+    @media (max-width: 768px) {
+      .scroll-section { padding: 4rem 1.5rem; justify-content: center !important; }
+      .glass-card { padding: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="sequence-canvas"></canvas>
+
+  <main class="scroll-container">
+    <section class="scroll-section">
+      <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
+        <span class="badge">Mode B Engine</span>
+        <h1>Frame Sequence Scrubber</h1>
+        <p>Scroll down to scrub smoothly through in-memory preloaded animation frames.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Zero Stutter</span>
+        <h2>Preloaded RAM Buffer</h2>
+        <p>Every frame is cached directly in browser memory, eliminating video decoding lag and network buffering.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Aspect Ratio Fit</span>
+        <h2>Canvas Cover Math</h2>
+        <p>Smart aspect ratio scaling guarantees crisp, edge-to-edge coverage across desktop widescreen and mobile portrait displays.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('sequence-canvas');
+    const ctx = canvas.getContext('2d');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const frameCount = 100;
+    const frames = [];
+
+    // Procedural Generator for Demonstration Frames
+    function generateDemoFrames() {
+      for (let i = 0; i < frameCount; i++) {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 1920; offCanvas.height = 1080;
+        const oCtx = offCanvas.getContext('2d');
+
+        // Dark Studio Void
+        oCtx.fillStyle = '#020617';
+        oCtx.fillRect(0, 0, 1920, 1080);
+
+        // Animated Rotating Gyro Ring
+        const t = (i / frameCount) * Math.PI * 2;
+        oCtx.save();
+        oCtx.translate(960, 540);
+        oCtx.rotate(t);
+        
+        oCtx.strokeStyle = '#38bdf8';
+        oCtx.lineWidth = 12;
+        oCtx.shadowColor = '#38bdf8';
+        oCtx.shadowBlur = 30;
+
+        oCtx.beginPath();
+        oCtx.arc(0, 0, 260, 0, Math.PI * 2);
+        oCtx.stroke();
+
+        oCtx.strokeStyle = '#f43f5e';
+        oCtx.lineWidth = 8;
+        oCtx.beginPath();
+        oCtx.arc(0, 0, 180, 0, Math.PI * 2);
+        oCtx.stroke();
+        oCtx.restore();
+
+        frames.push(offCanvas);
+      }
+    }
+
+    generateDemoFrames();
+
+    function drawFrame(index) {
+      const idx = Math.min(frameCount - 1, Math.max(0, Math.floor(index)));
+      const frame = frames[idx];
+      if (!frame) return;
+
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const fw = frame.width;
+      const fh = frame.height;
+
+      const ratio = Math.max(cw / fw, ch / fh);
+      const shiftX = (cw - fw * ratio) / 2;
+      const shiftY = (ch - fh * ratio) / 2;
+
+      ctx.drawImage(frame, 0, 0, fw, fh, shiftX, shiftY, fw * ratio, fh * ratio);
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      drawFrame(currentFrame);
+    }
+    window.addEventListener('resize', resize);
+
+    let targetProgress = 0, currentProgress = 0, currentFrame = 0;
+    const damp = prefersReducedMotion ? 0.3 : 0.08;
+
+    function getProgress() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      return max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
+    }
+    window.addEventListener('scroll', () => { targetProgress = getProgress(); }, { passive: true });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      currentProgress += (targetProgress - currentProgress) * damp;
+      currentFrame = currentProgress * (frameCount - 1);
+      drawFrame(currentFrame);
+    }
+
+    const cards = document.querySelectorAll('.glass-card');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('is-visible'); });
+    }, { threshold: 0.2 });
+    cards.forEach((c) => observer.observe(c));
+
+    resize();
+    animate();
+  </script>
+</body>
+</html>
