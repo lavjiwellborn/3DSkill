@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shrine at Dusk — Procedural 3D Experience</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #ede6d6;
+      background: #160e18;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    #webgl-canvas {
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
+    }
+    .scroll-container {
+      position: relative; z-index: 10; pointer-events: none;
+    }
+    .scroll-section {
+      min-height: 100vh; display: flex; align-items: center; padding: 6rem 8%;
+    }
+    .scroll-section:nth-child(odd) { justify-content: flex-start; }
+    .scroll-section:nth-child(even) { justify-content: flex-end; }
+    .scroll-section:first-child {
+      justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 12vh;
+    }
+    .glass-card {
+      max-width: 520px; padding: 2.5rem;
+      background: rgba(22, 14, 24, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(212, 175, 106, 0.2);
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card.is-visible { opacity: 1; transform: translateY(0); }
+    .glass-card h1, .glass-card h2 {
+      font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.15; margin-bottom: 1rem; color: #ffd194;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+    }
+    .glass-card p { font-size: clamp(1rem, 1.8vw, 1.15rem); line-height: 1.7; color: #cbd5e1; }
+    .badge {
+      display: inline-block; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #ffd194; background: rgba(212, 175, 106, 0.15); border: 1px solid rgba(212, 175, 106, 0.3);
+      border-radius: 999px; margin-bottom: 1rem;
+    }
+    @media (max-width: 768px) {
+      .scroll-section { padding: 4rem 1.5rem; justify-content: center !important; }
+      .glass-card { padding: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="webgl-canvas"></canvas>
+
+  <main class="scroll-container">
+    <section class="scroll-section">
+      <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
+        <span class="badge">Procedural Shrine</span>
+        <h1>Sanctuary at Dusk</h1>
+        <p>A procedural Japanese pagoda generated in real-time WebGL.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Architecture</span>
+        <h2>Precision Tiers</h2>
+        <p>Three proportionate tiers with vermillion structural beams, plaster walls, and sweeping corner rafters.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Atmosphere</span>
+        <h2>Twilight Embers</h2>
+        <p>Golden-hour directional lighting cross-lit against cool indigo rim highlights and floating sparks.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Sacred Spire</span>
+        <h2>The Golden Sōrin</h2>
+        <p>Five symbolic rings ascending to the sacred jewel finial against the dusk sky.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+
+    const canvas = document.getElementById('webgl-canvas');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.95;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x160e18, 0.038);
+    renderer.setClearColor(0x160e18);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 2, 9);
+
+    // Cross-Lighting Rig
+    scene.add(new THREE.AmbientLight(0x2a1e28, 0.5));
+    const key = new THREE.DirectionalLight(0xffd194, 1.4);
+    key.position.set(5, 8, 4);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.bias = -0.0001;
+    key.shadow.normalBias = 0.02;
+    scene.add(key);
+
+    const rim = new THREE.DirectionalLight(0x38bdf8, 0.6);
+    rim.position.set(-4, 3, -6);
+    scene.add(rim);
+
+    // Shadow Catcher Plane
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(25, 25),
+      new THREE.ShadowMaterial({ opacity: 0.4 })
+    );
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = -0.15;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    // Build Procedural Pagoda
+    function buildPagoda(tierCount = 3) {
+      const pagoda = new THREE.Group();
+      let y = 0;
+      const tierHeight = 1.1;
+
+      const wallMat  = new THREE.MeshStandardMaterial({ color: 0xede6d6, roughness: 0.85 });
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x9c2b2b, roughness: 0.55 });
+      const roofMat  = new THREE.MeshStandardMaterial({ color: 0x14171c, roughness: 0.45, metalness: 0.1 });
+      const stoneMat = new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.9 });
+      const goldMat  = new THREE.MeshStandardMaterial({ color: 0xd4af6a, roughness: 0.3, metalness: 0.75 });
+
+      const pillarGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.1, 8);
+      const flourishGeo = new THREE.TorusGeometry(0.45, 0.05, 6, 10, Math.PI * 0.55);
+
+      const plinth = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.8, 0.3, 4), stoneMat);
+      plinth.rotation.y = Math.PI / 4;
+      plinth.position.y = -0.15;
+      plinth.receiveShadow = true;
+      pagoda.add(plinth);
+
+      for (let i = 0; i < tierCount; i++) {
+        const scale = 1 - i * 0.2;
+        const wallSize = 2.0 * scale;
+        const roofOverhang = 1.75;
+
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(wallSize, tierHeight, wallSize), wallMat);
+        wall.position.y = y + tierHeight / 2;
+        wall.castShadow = true;
+        pagoda.add(wall);
+
+        [y, y + tierHeight].forEach((beamY) => {
+          const beam = new THREE.Mesh(new THREE.BoxGeometry(wallSize * 1.08, 0.12, wallSize * 1.08), frameMat);
+          beam.position.y = beamY;
+          beam.castShadow = true;
+          pagoda.add(beam);
+        });
+
+        const pillarRadius = (wallSize / 2) * 1.02;
+        for (let p = 0; p < 8; p++) {
+          const angle = (p / 8) * Math.PI * 2 + Math.PI / 4;
+          const pillar = new THREE.Mesh(pillarGeo, frameMat);
+          pillar.scale.y = tierHeight / 1.1;
+          pillar.position.set(Math.cos(angle) * pillarRadius, y + tierHeight / 2, Math.sin(angle) * pillarRadius);
+          pillar.castShadow = true;
+          pagoda.add(pillar);
+        }
+
+        const roofRadius = (wallSize / 2) * Math.SQRT2 * roofOverhang;
+        const roofHeight = wallSize * 0.35;
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(roofRadius, roofHeight, 4), roofMat);
+        roof.rotation.y = Math.PI / 4;
+        roof.position.y = y + tierHeight + roofHeight / 2;
+        roof.castShadow = true;
+        pagoda.add(roof);
+
+        for (let c = 0; c < 4; c++) {
+          const cornerAngle = (c / 4) * Math.PI * 2 + Math.PI / 4;
+          const flourish = new THREE.Mesh(flourishGeo, frameMat);
+          flourish.position.set(Math.cos(cornerAngle) * roofRadius * 0.75, y + tierHeight + 0.05, Math.sin(cornerAngle) * roofRadius * 0.75);
+          flourish.rotation.y = -cornerAngle;
+          flourish.rotation.z = Math.PI / 2.4;
+          pagoda.add(flourish);
+        }
+
+        y += tierHeight + roofHeight + 0.15;
+      }
+
+      const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.8, 8), goldMat);
+      spire.position.y = y + 0.9;
+      pagoda.add(spire);
+      for (let r = 0; r < 5; r++) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28 - r * 0.035, 0.025, 8, 16), goldMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = y + 0.25 + r * 0.28;
+        pagoda.add(ring);
+      }
+      const jewel = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), goldMat);
+      jewel.position.y = y + 1.9;
+      pagoda.add(jewel);
+
+      return pagoda;
+    }
+
+    const heroObject = buildPagoda(3);
+    scene.add(heroObject);
+
+    // Glowing Embers
+    const pCount = 100;
+    const pPos = new Float32Array(pCount * 3);
+    for (let i = 0; i < pCount; i++) {
+      pPos[i * 3]     = (Math.random() - 0.5) * 12;
+      pPos[i * 3 + 1] = Math.random() * 8;
+      pPos[i * 3 + 2] = (Math.random() - 0.5) * 12;
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: 0xffaa44, size: 0.04, transparent: true, opacity: 0.65, depthWrite: false
+    });
+    const particles = new THREE.Points(pGeo, pMat);
+    scene.add(particles);
+
+    // Scroll & Motion System
+    let targetProgress = 0, currentProgress = 0;
+    let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
+    const damp = prefersReducedMotion ? 0.25 : 0.08;
+
+    function getProgress() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      return max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
+    }
+
+    window.addEventListener('scroll', () => { targetProgress = getProgress(); }, { passive: true });
+    window.addEventListener('pointermove', (e) => {
+      mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+    }, { passive: true });
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+    const timeline = [
+      { t: 0.0,  rotY: 0,             posY: -0.5, camY: 2.0, fov: 50 },
+      { t: 0.35, rotY: Math.PI * 0.6, posY: 0.3,  camY: 2.8, fov: 46 },
+      { t: 0.70, rotY: Math.PI * 1.3, posY: 1.0,  camY: 3.6, fov: 42 },
+      { t: 1.0,  rotY: Math.PI * 2.0, posY: 0.2,  camY: 4.2, fov: 38 },
+    ];
+
+    function applyTimeline(p) {
+      let i = 0;
+      while (i < timeline.length - 2 && p > timeline[i + 1].t) i++;
+      const a = timeline[i], b = timeline[i + 1];
+      const localT = smoothstep((p - a.t) / (b.t - a.t || 1));
+
+      heroObject.rotation.y = lerp(a.rotY, b.rotY, localT);
+      heroObject.position.y = lerp(a.posY, b.posY, localT);
+      camera.fov = lerp(a.fov, b.fov, localT);
+      camera.updateProjectionMatrix();
+    }
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      currentProgress += (targetProgress - currentProgress) * damp;
+      applyTimeline(currentProgress);
+
+      curMouseX += (mouseX - curMouseX) * 0.05;
+      curMouseY += (mouseY - curMouseY) * 0.05;
+      camera.position.x = curMouseX * 0.7;
+      camera.position.y = 2.0 + curMouseY * 0.35;
+
+      if (!prefersReducedMotion) {
+        heroObject.position.y += Math.sin(elapsed * 0.7) * 0.03;
+        heroObject.rotation.z = Math.sin(elapsed * 0.3) * 0.008;
+      }
+
+      particles.rotation.y += 0.0004;
+      camera.lookAt(0, heroObject.position.y + 1.2, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    function onResize() {
+      const w = window.innerWidth, h = window.innerHeight;
+      const aspect = w / h;
+      camera.aspect = aspect;
+      camera.fov = aspect < 1.0 ? Math.min(80, 50 / aspect * 0.78) : 50;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, w < 768 ? 1.5 : 2.0));
+    }
+    window.addEventListener('resize', onResize);
+
+    const cards = document.querySelectorAll('.glass-card');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('is-visible'); });
+    }, { threshold: 0.2 });
+    cards.forEach((c) => observer.observe(c));
+
+    animate();
+  </script>
+</body>
+</html>

@@ -10,8 +10,8 @@ description: How to build cinematic, "ultra 3D animated" websites where the enti
 The common amateur workaround for "3D websites": generate an AI video clip (via Kling, Sora, Runway, etc.), extract 150 individual image frames, and scrub through the image sequence on scroll.
 
 **Why that approach fails:**
-* Massive asset weight (30MB+ of raster images destroying page speed).
-* Fixed camera paths and fixed resolutions that look pixelated on Retina/4K displays.
+* Massive asset weight (30MB+ of raster images destroying page speed and mobile loading).
+* Fixed camera paths and fixed resolutions that look blurry/pixelated on Retina and 4K displays.
 * Impossible to dynamically tweak colors, lighting, timing, camera angles, or text placement without regenerating the entire video.
 
 **The Procedural 3D Approach:**
@@ -54,19 +54,23 @@ There are **zero video clips and zero raster frame images**. The 3D scene is con
 
 ---
 
-## Reference Navigation & Toolkit
+## Complete Reference & Examples System
 
 Read these dedicated reference guides to implement every subsystem with perfection:
 
-| Reference Guide | What It Covers |
+| Reference Guide / Example | What It Covers |
 | :--- | :--- |
-| **[`references/scaffold-and-overlay.md`](file:///e:/SKILL/extracted/skill/procedural-3d-scroll-sites/references/scaffold-and-overlay.md)** | **Start here.** Complete, copy-paste-ready HTML5 & React scaffolds with pre-wired damping, lighting, shadow catcher, mobile FOV, and glass cards. |
-| **[`references/procedural-geometry.md`](file:///e:/SKILL/extracted/skill/procedural-3d-scroll-sites/references/procedural-geometry.md)** | Geometric blueprint library (Pagoda, Sci-Fi Vessel, Cyberpunk Spire, Smart Device, Low-Poly Island), Lathe profile math, and plan-shape rules. |
-| **[`references/scroll-choreography.md`](file:///e:/SKILL/extracted/skill/procedural-3d-scroll-sites/references/scroll-choreography.md)** | Mathematical easing (`smoothstep`, `smootherstep`, cubic curves), interactive cursor parallax, idle breathing engine, and camera splines. |
-| **[`references/polish-and-performance.md`](file:///e:/SKILL/extracted/skill/procedural-3d-scroll-sites/references/polish-and-performance.md)** | ACES tone mapping, cross-lighting temperature rigs, shadow catcher, mobile portrait FOV math, zero-allocation render loop, and GPU cleanup. |
-| **[`references/procedural-materials-and-textures.md`](file:///e:/SKILL/extracted/skill/procedural-3d-scroll-sites/references/procedural-materials-and-textures.md)** | Zero-download procedural textures (in-memory canvas generation for brushed metal, wood grain, cyber grids, building facades, normal maps) & GLSL shaders. |
-| **[`references/scene-templates.md`](file:///e:/SKILL/extracted/skill/procedural-3d-scroll-sites/references/scene-templates.md)** | 3 instant art-directed presets: *"Shrine at Dusk"* (warm cultural), *"Floating Product"* (clean Apple-style studio), *"Night Cityscape"* (moody cyber). |
-| **[`references/troubleshooting-and-faq.md`](file:///e:/SKILL/extracted/skill/procedural-3d-scroll-sites/references/troubleshooting-and-faq.md)** | Diagnostic matrix for black canvas, unclickable buttons, shadow acne, mobile portrait cutoff, scroll lockup, and performance drops. |
+| **[`references/scaffold-and-overlay.md`](file:///e:/SKILL/references/scaffold-and-overlay.md)** | **Start here.** Complete, copy-paste-ready HTML5 & React scaffolds with pre-wired damping, lighting, shadow catcher, mobile FOV, and glass cards. |
+| **[`references/procedural-geometry.md`](file:///e:/SKILL/references/procedural-geometry.md)** | Geometric blueprint library (Pagoda, Sci-Fi Vessel, Cyberpunk Spire, Smart Device, Low-Poly Island), Lathe profile math, and plan-shape rules. |
+| **[`references/lighting-and-color-palettes.md`](file:///e:/SKILL/references/lighting-and-color-palettes.md)** | **Curated Color Palettes**: Tested hex codes for *Ethereal Dusk*, *Cyberpunk Obsidian*, *Apple Minimalist Studio*, *Bioluminescent Deep Sea*, and *Solar Flare Amber*. |
+| **[`references/scroll-choreography.md`](file:///e:/SKILL/references/scroll-choreography.md)** | Mathematical easing (`smoothstep`, `smootherstep`, cubic curves), interactive cursor parallax, idle breathing engine, and camera splines. |
+| **[`references/polish-and-performance.md`](file:///e:/SKILL/references/polish-and-performance.md)** | ACES tone mapping, cross-lighting temperature rigs, shadow catcher, mobile portrait FOV math, zero-allocation render loop, and GPU cleanup. |
+| **[`references/procedural-materials-and-textures.md`](file:///e:/SKILL/references/procedural-materials-and-textures.md)** | Zero-download procedural textures (in-memory canvas generation for brushed metal, wood grain, cyber grids, building facades, normal maps) & GLSL shaders. |
+| **[`references/scene-templates.md`](file:///e:/SKILL/references/scene-templates.md)** | 3 instant art-directed presets: *"Shrine at Dusk"*, *"Floating Product"*, *"Night Cityscape"*. |
+| **[`references/troubleshooting-and-faq.md`](file:///e:/SKILL/references/troubleshooting-and-faq.md)** | Diagnostic matrix for black canvas, unclickable buttons, shadow acne, mobile portrait cutoff, scroll lockup, and performance drops. |
+| **[`examples/shrine-at-dusk.html`](file:///e:/SKILL/examples/shrine-at-dusk.html)** | Fully functional standalone HTML demo of the Pagoda with twilight cross-lighting and sunset embers. |
+| **[`examples/cyberpunk-megastructure.html`](file:///e:/SKILL/examples/cyberpunk-megastructure.html)** | Fully functional standalone HTML demo of the Cyberpunk Tower with in-memory window facade textures. |
+| **[`examples/luxury-product-showcase.html`](file:///e:/SKILL/examples/luxury-product-showcase.html)** | Fully functional standalone HTML demo of the Luxury Device with Apple-style studio lighting. |
 
 ---
 
