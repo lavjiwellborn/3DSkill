@@ -41,12 +41,14 @@
 
 ---
 
-## 📚 Complete Reference System (11 Comprehensive Guides)
+## 📚 Complete Reference System (13 Comprehensive Guides)
 
 | Document | Highlights |
 | :--- | :--- |
-| **[`SKILL.md`](./SKILL.md)** | **Master Instruction Manual**: System architecture, 10-phase production build order, 10-point self-check audit gate, and execution matrix. |
-| **[`references/scaffold-and-overlay.md`](./references/scaffold-and-overlay.md)** | **Copy-Paste Scaffolds**: Pre-wired standalone HTML5 & React scaffolds with damping, ACES tone mapping, shadow catcher, mobile FOV, and glass cards. |
+| **[`SKILL.md`](./SKILL.md)** | **Master Instruction Manual**: System architecture, 10-phase production build order, 12-point self-check audit gate, and execution matrix. |
+| **[`references/decision-router.md`](./references/decision-router.md)** | **⚡ START HERE**: Decision tree routing any user prompt directly to the required mode, files, blueprints, and build sequence. |
+| **[`references/golden-path-walkthrough.md`](./references/golden-path-walkthrough.md)** | **End-to-End Tutorial**: Step-by-step walkthrough showing how all subsystems connect from prompt to final 12-point self-check gate. |
+| **[`references/scaffold-and-overlay.md`](./references/scaffold-and-overlay.md)** | **Copy-Paste Scaffolds**: Pre-wired standalone HTML5 & React scaffolds with damping, ACES tone mapping, shadow catcher, mobile FOV, accessibility, and glass cards. |
 | **[`references/6dof-scrollytelling-director.md`](./references/6dof-scrollytelling-director.md)** | **6-DOF Motion Director**: Mathematical trajectories for Dolly, Truck, Pedestal, Pan, Tilt, Roll, Spiral Ascent, Spline Fly-Throughs, Vertigo Dolly-Zoom, and LookAt tracking. |
 | **[`references/image-sequence-scrubber.md`](./references/image-sequence-scrubber.md)** | **Mode B & C Engine**: Preloading image arrays into RAM, `object-fit: cover` canvas math, DPR retina scaling, sub-pixel damping, and hybrid 3D composition. |
 | **[`references/procedural-geometry.md`](./references/procedural-geometry.md)** | **5 Core Blueprints**: Japanese Shrine Pagoda, Sci-Fi Vessel, Cyberpunk Spire, Smart Device, and Floating Low-Poly Island. |
@@ -56,18 +58,19 @@
 | **[`references/scroll-choreography.md`](./references/scroll-choreography.md)** | **Motion Design**: Dual-layer damping, non-linear easing curves (`smoothstep`, `smootherstep`, cubic curves), interactive cursor parallax, and idle harmonic breathing. |
 | **[`references/polish-and-performance.md`](./references/polish-and-performance.md)** | **Visual Polish & Perf**: ACES filmic tone mapping, 4-point cross-lighting, soft contact shadow catcher, mobile portrait FOV compensation, and zero-allocation render loops. |
 | **[`references/scene-templates.md`](./references/scene-templates.md)** | **3 Art-Directed Mood Presets**: Ready-to-use configurations for *"Shrine at Dusk"*, *"Floating Product"*, and *"Night Cityscape"*. |
-| **[`references/troubleshooting-and-faq.md`](./references/troubleshooting-and-faq.md)** | **Diagnostic Matrix**: Instant solutions for black canvas, unclickable overlay text, mobile portrait clipping, shadow acne, and memory leaks. |
+| **[`references/troubleshooting-and-faq.md`](./references/troubleshooting-and-faq.md)** | **Diagnostic Matrix**: Instant solutions for black canvas, unclickable overlay text, mobile portrait clipping, shadow acne, CDN fallback, and memory leaks. |
 
 ---
 
-## 🎨 5 Turnkey Standalone Runnable Examples
+## 🎨 6 Turnkey Standalone Runnable Examples
 
 Explore the complete standalone HTML examples in [`examples/`](./examples/):
-* **[`examples/shrine-at-dusk.html`](./examples/shrine-at-dusk.html)**: Japanese Pagoda with twilight cross-lighting and sunset embers.
+* **[`examples/shrine-at-dusk.html`](./examples/shrine-at-dusk.html)**: Japanese Pagoda with twilight cross-lighting, sunset embers, and glass cards.
 * **[`examples/cyberpunk-megastructure.html`](./examples/cyberpunk-megastructure.html)**: Cyberpunk Spire with in-memory procedural window facade textures.
 * **[`examples/luxury-product-showcase.html`](./examples/luxury-product-showcase.html)**: Floating Luxury Device with Apple-style studio lighting and brushed aluminum.
 * **[`examples/image-sequence-scrubber.html`](./examples/image-sequence-scrubber.html)**: **Mode B Demo**: In-memory preloaded frame sequence scrubber with sub-frame damping.
 * **[`examples/6dof-camera-flythrough.html`](./examples/6dof-camera-flythrough.html)**: **6-DOF Demo**: Catmull-Rom spline camera flying through an architectural sci-fi tunnel with banking Dutch roll.
+* **[`examples/drone-aerial-descent.html`](./examples/drone-aerial-descent.html)**: **Advanced Multi-Scene Demo**: Autonomous drone aerial flight through a cyberpunk neon canyon into a hillside villa with full HUD telemetry.
 
 ---
 
@@ -85,7 +88,7 @@ Copy any production-ready scaffold from [`references/scaffold-and-overlay.md`](.
 
 ---
 
-## 📐 10-Point Self-Check Gate
+## 📐 12-Point Self-Check Gate
 
 1. **Squint Silhouette Test**: Does the object read instantly at a glance without text?
 2. **Plan-Shape Coherence**: Do roofs/caps match the footprint shape beneath them?
@@ -97,6 +100,8 @@ Copy any production-ready scaffold from [`references/scaffold-and-overlay.md`](.
 8. **Continuous Scroll Coverage**: Is there visual transformation across the entire 0→1 scroll range?
 9. **Idle Micro-Motion ("Breathing")**: Does the scene gently breathe when scrolling stops?
 10. **Mobile Portrait Framing**: Does the camera FOV adjust automatically to prevent geometry clipping?
+11. **Reduced Motion Respect**: Is `prefers-reduced-motion` checked to disable or minimize non-essential motion?
+12. **Text Contrast & Legibility**: Do all glass cards maintain WCAG AA contrast (4.5:1) with backdrop-filter blur over 3D geometry?
 
 ---
 

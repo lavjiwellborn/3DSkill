@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AERO-ARCH // Autonomous Drone Incline Descent</title>
+  <meta name="description" content="Cinematic procedural 3D scroll landing page: Drone aerial descent through a neon city canyon into a luxury modern architectural home.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Three.js from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    /* ==========================================================================
+       RESET & CORE THEME
+       ========================================================================== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-dark: #040711;
+      --accent-cyan: #00f0ff;
+      --accent-blue: #0ea5e9;
+      --accent-amber: #ffaa40;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --glass-bg: rgba(7, 13, 27, 0.72);
+      --glass-border: rgba(0, 240, 255, 0.18);
+      --hud-glow: 0 0 20px rgba(0, 240, 255, 0.35);
+    }
+
+    html {
+      scroll-behavior: auto;
+      background-color: var(--bg-dark);
+    }
+
+    body {
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      background-color: var(--bg-dark);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    /* ==========================================================================
+       FIXED WEBGL 3D CANVAS
+       ========================================================================== */
+    #webgl-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* ==========================================================================
+       LOADER SCREEN
+       ========================================================================== */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, #0b1528 0%, #040711 100%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.9s;
+    }
+
+    #loader.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loader-ring {
+      width: 76px;
+      height: 76px;
+      border: 3px solid rgba(0, 240, 255, 0.12);
+      border-top-color: var(--accent-cyan);
+      border-right-color: var(--accent-amber);
+      border-radius: 50%;
+      animation: droneSpin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.25);
+    }
+
+    .loader-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      letter-spacing: 0.3em;
+      color: var(--accent-cyan);
+      margin-top: 1.8rem;
+      text-transform: uppercase;
+    }
+
+    .loader-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    @keyframes droneSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ==========================================================================
+       DRONE HUD & FLIGHT TELEMETRY (FIXED OVERLAY)
+       ========================================================================== */
+    .drone-hud {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 1.5rem 2rem;
+    }
+
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .hud-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: rgba(4, 10, 24, 0.85);
+      border: 1px solid var(--glass-border);
+      padding: 0.5rem 1rem;
+      border-radius: 100px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .hud-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
+      animation: pulseGlow 1.8s infinite;
+    }
+
+    .hud-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .hud-controls {
+      display: flex;
+      gap: 0.8rem;
+      pointer-events: auto;
+    }
+
+    .hud-btn {
+      background: rgba(6, 14, 30, 0.8);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.25s ease;
+    }
+
+    .hud-btn:hover {
+      background: rgba(0, 240, 255, 0.18);
+      border-color: var(--accent-cyan);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .hud-btn.active {
+      background: rgba(0, 240, 255, 0.25);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    /* CENTER RETICLE & ARTIFICIAL HORIZON */
+    .hud-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 220px;
+      height: 220px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s ease-out;
+    }
+
+    .reticle-circle {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      border: 1px dashed rgba(0, 240, 255, 0.35);
+      border-radius: 50%;
+    }
+
+    .reticle-cross {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .reticle-cross::before, .reticle-cross::after {
+      content: '';
+      position: absolute;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    .reticle-cross::before { width: 14px; height: 1.5px; }
+    .reticle-cross::after { width: 1.5px; height: 14px; }
+
+    .horizon-bar-left, .horizon-bar-right {
+      position: absolute;
+      width: 42px;
+      height: 2px;
+      background: rgba(0, 240, 255, 0.45);
+    }
+    .horizon-bar-left { left: 10px; }
+    .horizon-bar-right { right: 10px; }
+
+    .pitch-ladder {
+      position: absolute;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: rgba(0, 240, 255, 0.7);
+      letter-spacing: 0.1em;
+    }
+    .pitch-ladder.top { top: 22px; }
+    .pitch-ladder.bottom { bottom: 22px; }
+
+    /* INCLINE GRAPH WIDGET (LOWER LEFT) */
+    .hud-graph-card {
+      position: absolute;
+      bottom: 2rem;
+      left: 2rem;
+      background: rgba(4, 10, 24, 0.85);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 1.2rem 1.4rem;
+      width: 280px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .graph-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 0.6rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .incline-canvas-wrap {
+      width: 100%;
+      height: 60px;
+      background: rgba(0, 240, 255, 0.04);
+      border: 1px solid rgba(0, 240, 255, 0.15);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #incline-graph-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+      margin-top: 0.8rem;
+    }
+
+    .telem-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .telem-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .telem-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .telem-val.cyan { color: var(--accent-cyan); }
+    .telem-val.amber { color: var(--accent-amber); }
+
+    /* FLIGHT PROGRESS BAR (RIGHT SIDE) */
+    .flight-altitude-bar {
+      position: absolute;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 240px;
+      width: 50px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .alt-track {
+      flex: 1;
+      width: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .alt-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(to bottom, var(--accent-cyan), var(--accent-amber));
+      box-shadow: 0 0 10px var(--accent-cyan);
+      transition: height 0.05s ease-out;
+    }
+
+    .alt-marker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--text-muted);
+    }
+
+    /* ==========================================================================
+       SCROLL CONTAINER & NARRATIVE SECTIONS
+       ========================================================================== */
+    .scroll-container {
+      position: relative;
+      z-index: 10;
+      pointer-events: none; /* Passes natural scroll to window */
+    }
+
+    .scroll-section {
+      min-height: 120vh;
+      display: flex;
+      align-items: center;
+      padding: 0 8%;
+    }
+
+    /* Section 1: Aerial Recon */
+    .scroll-section:nth-child(1) {
+      min-height: 100vh;
+      justify-content: flex-start;
+      align-items: flex-end;
+      padding-bottom: 18vh;
+    }
+
+    /* Section 2: Incline Descent */
+    .scroll-section:nth-child(2) {
+      justify-content: flex-end;
+    }
+
+    /* Section 3: Villa Approach */
+    .scroll-section:nth-child(3) {
+      justify-content: flex-start;
+    }
+
+    /* Section 4: Interior Docking */
+    .scroll-section:nth-child(4) {
+      justify-content: center;
+      min-height: 140vh;
+      text-align: center;
+    }
+
+    /* GLASSMORPHIC CONTENT CARDS */
+    .glass-card {
+      max-width: 540px;
+      padding: 2.8rem;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+      pointer-events: auto;
+      opacity: 0;
+      transform: translateY(40px) scale(0.97);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-card.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .tag-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 0.35rem 0.8rem;
+      border-radius: 6px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2rem, 3.8vw, 3.2rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.2rem;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card-body {
+      font-size: 1.05rem;
+      line-height: 1.65;
+      color: var(--text-muted);
+      margin-bottom: 1.8rem;
+    }
+
+    .spec-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-bottom: 2rem;
+    }
+
+    .spec-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      color: #e2e8f0;
+    }
+
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, #0284c7 100%);
+      color: #040711;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.9rem 1.8rem;
+      border-radius: 12px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0, 240, 255, 0.35);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .cta-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px rgba(0, 240, 255, 0.55);
+      filter: brightness(1.1);
+    }
+
+    /* SCROLL HINT */
+    .scroll-hint {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0.8;
+      animation: floatHint 2.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .scroll-hint-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.25em;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+    }
+
+    .scroll-chevron {
+      width: 18px;
+      height: 18px;
+      border-right: 2px solid var(--accent-cyan);
+      border-bottom: 2px solid var(--accent-cyan);
+      transform: rotate(45deg);
+    }
+
+    @keyframes floatHint {
+      0%, 100% { transform: translate(-50%, 0); }
+      50% { transform: translate(-50%, 10px); }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .drone-hud { padding: 1rem; }
+      .hud-graph-card { display: none; }
+      .flight-altitude-bar { right: 0.8rem; }
+      .scroll-section { padding: 0 5%; min-height: 100vh; }
+      .glass-card { padding: 1.8rem; }
+      .card-title { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loader">
+    <div class="loader-ring"></div>
+    <div class="loader-title">CALIBRATING DRONE OPTICS // THREE.JS</div>
+    <div class="loader-sub">GENERATING PROCEDURAL CITY &amp; VILLA VERTEX</div>
+  </div>
+
+  <!-- FIXED 3D WEBGL CANVAS -->
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- DRONE FLIGHT TELEMETRY HUD OVERLAY -->
+  <div class="drone-hud">
+    <!-- TOP HEADER -->
+    <div class="hud-header">
+      <div class="hud-badge">
+        <div class="hud-dot"></div>
+        <div class="hud-text" id="flight-mode-text">FLIGHT MODE: AERIAL HIGH-RECON</div>
+      </div>
+
+      <div class="hud-controls">
+        <button class="hud-btn" id="audio-toggle" title="Toggle Procedural Drone Audio">
+          <span id="audio-icon">🔇</span> <span id="audio-label">AUDIO HUM</span>
+        </button>
+        <button class="hud-btn" id="graph-toggle" title="Toggle Holographic Incline Vector">
+          <span>📐</span> <span>VECTOR GRAPH</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- CENTER RETICLE & ARTIFICIAL HORIZON -->
+    <div class="hud-center" id="hud-reticle">
+      <div class="reticle-circle"></div>
+      <div class="horizon-bar-left"></div>
+      <div class="horizon-bar-right"></div>
+      <div class="reticle-cross"></div>
+      <div class="pitch-ladder top" id="pitch-top">+15°</div>
+      <div class="pitch-ladder bottom" id="pitch-bottom">-15°</div>
+    </div>
+
+    <!-- INCLINE GRAPH TELEMETRY WIDGET (BOTTOM LEFT) -->
+    <div class="hud-graph-card">
+      <div class="graph-title">
+        <span>INCLINE TRAJECTORY</span>
+        <span id="slope-angle-text" style="color:var(--accent-amber)">-48.5° SLOPE</span>
+      </div>
+      <div class="incline-canvas-wrap">
+        <canvas id="incline-graph-canvas" width="280" height="60"></canvas>
+      </div>
+      <div class="telemetry-grid">
+        <div class="telem-item">
+          <span class="telem-label">ALTITUDE</span>
+          <span class="telem-val cyan" id="hud-alt">1,850 M</span>
+        </div>
+        <div class="telem-item">
+          <span class="telem-label">SPEED</span>
+          <span class="telem-val amber" id="hud-speed">142 KM/H</span>
+        </div>
+        <div class="telem-item">
+          <span class="telem-label">WAYPOINT</span>
+          <span class="telem-val" id="hud-waypoint">WP-ALPHA</span>
+        </div>
+        <div class="telem-item">
+          <span class="telem-label">INCLINE G-FORCE</span>
+          <span class="telem-val cyan" id="hud-gforce">1.18 G</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALTITUDE PROGRESS BAR (RIGHT) -->
+    <div class="flight-altitude-bar">
+      <span class="alt-marker">2000m</span>
+      <div class="alt-track">
+        <div class="alt-fill" id="alt-fill-bar"></div>
+      </div>
+      <span class="alt-marker">0m</span>
+    </div>
+  </div>
+
+  <!-- SCROLLABLE NARRATIVE OVERLAY -->
+  <main class="scroll-container">
+    
+    <!-- SECTION 1: HIGH ALTITUDE AERIAL -->
+    <section class="scroll-section">
+      <div class="glass-card is-visible">
+        <span class="tag-badge">MISSION STAGE 01 // ORBITAL INCLINE</span>
+        <h1 class="card-title">METROPOLIS RECONNAISSANCE</h1>
+        <p class="card-body">
+          Hovering at 1,850 meters above the nocturnal metropolis. Real-time GPU radar locks onto the precision incline descent corridor toward the signature Villa Vertex cantilever.
+        </p>
+        <div class="spec-pills">
+          <span class="spec-pill">LIDAR: 100% ACTIVE</span>
+          <span class="spec-pill">BAROMETRIC: 1013 HPA</span>
+          <span class="spec-pill">CORRIDOR: CLEAR</span>
+        </div>
+        <a href="#section-2" class="cta-btn" onclick="scrollToRatio(0.33); return false;">INITIATE INCLINE DESCENT &darr;</a>
+      </div>
+      <div class="scroll-hint">
+        <span class="scroll-hint-text">SCROLL TO DIVE</span>
+        <div class="scroll-chevron"></div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: CANYON INCLINE DIVE -->
+    <section class="scroll-section" id="section-2">
+      <div class="glass-card">
+        <span class="tag-badge">MISSION STAGE 02 // VECTOR DIVE</span>
+        <h2 class="card-title">INCLINE GRAPH TRAJECTORY</h2>
+        <p class="card-body">
+          Banking at a -48.5° descent vector through the skyscraper canyons. Holographic glide slope markers align with optical telemetry as street grid illuminations reflect across the fuselage.
+        </p>
+        <div class="spec-pills">
+          <span class="spec-pill">DESCENT ANGLE: -48.5°</span>
+          <span class="spec-pill">VELOCITY: 185 KM/H</span>
+          <span class="spec-pill">GIMBAL: STABILIZED</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: VILLA ROOFTOP CANTILEVER -->
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="tag-badge">MISSION STAGE 03 // APPROACH</span>
+        <h2 class="card-title">VILLA VERTEX CANTILEVER</h2>
+        <p class="card-body">
+          Leveling altitude across the private cedar terrace and illuminated infinity reflection pool. The panoramic smart-glass façade smoothly unlocks for interior docking.
+        </p>
+        <div class="spec-pills">
+          <span class="spec-pill">ALTITUDE: 48M</span>
+          <span class="spec-pill">PORTAL: RETRACTING</span>
+          <span class="spec-pill">AIRFLOW: LAMINAR</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: INTERIOR LIVING ROOM DOCKING -->
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="tag-badge">MISSION STAGE 04 // ARRIVAL</span>
+        <h2 class="card-title">ARCHITECTURAL SANCTUARY</h2>
+        <p class="card-body">
+          Drone gliding seamlessly inside the luxury living suite. Warm ambient fireplace ribbon, teak slat acoustics, and Italian marble floors blend seamlessly with the panoramic city backdrop.
+        </p>
+        <div class="spec-pills">
+          <span class="spec-pill">STATUS: DOCKED</span>
+          <span class="spec-pill">INDOOR LUX: 2200K WARMTH</span>
+          <span class="spec-pill">ZERO EMISSIONS</span>
+        </div>
+        <button class="cta-btn" onclick="scrollToRatio(0.0);">REPLAY AERIAL FLIGHT &uarr;</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================================================
+       THREE.JS PROCEDURAL 3D ENGINE & SCROLL CHOREOGRAPHY
+       ========================================================================== -->
+  <script>
+    // --------------------------------------------------------------------------
+    // 1. SCENE SETUP & RENDERER INITIALIZATION
+    // --------------------------------------------------------------------------
+    const canvas = document.getElementById('webgl-canvas');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x040711);
+    scene.fog = new THREE.FogExp2(0x040711, 0.0035);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 2000);
+    
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // --------------------------------------------------------------------------
+    // 2. PROCEDURAL TEXTURES & MATERIALS
+    // --------------------------------------------------------------------------
+    // Skyscraper lit-window procedural canvas texture
+    function createSkyscraperTexture() {
+      const texCanvas = document.createElement('canvas');
+      texCanvas.width = 512;
+      texCanvas.height = 1024;
+      const ctx = texCanvas.getContext('2d');
+
+      // Dark glass background
+      ctx.fillStyle = '#080d1a';
+      ctx.fillRect(0, 0, 512, 1024);
+
+      const rows = 64;
+      const cols = 16;
+      const padX = 8;
+      const padY = 6;
+      const winW = (512 - (cols + 1) * padX) / cols;
+      const winH = (1024 - (rows + 1) * padY) / rows;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const rand = Math.random();
+          if (rand > 0.6) {
+            // Lit warm yellow or cyan window
+            ctx.fillStyle = rand > 0.85 ? '#00f0ff' : (rand > 0.72 ? '#ffc83b' : '#38bdf8');
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 4;
+          } else {
+            // Unlit window
+            ctx.fillStyle = '#0f172a';
+            ctx.shadowBlur = 0;
+          }
+          const x = padX + c * (winW + padX);
+          const y = padY + r * (winH + padY);
+          ctx.fillRect(x, y, winW, winH);
+        }
+      }
+
+      const texture = new THREE.CanvasTexture(texCanvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      return texture;
+    }
+
+    // Wood floor procedural texture
+    function createWoodTexture() {
+      const texCanvas = document.createElement('canvas');
+      texCanvas.width = 512;
+      texCanvas.height = 512;
+      const ctx = texCanvas.getContext('2d');
+      ctx.fillStyle = '#2a1a0f';
+      ctx.fillRect(0, 0, 512, 512);
+
+      // Wood grain lines
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      for (let i = 0; i < 512; i += 32) {
+        ctx.fillRect(0, i, 512, 2);
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      for (let i = 0; i < 500; i++) {
+        ctx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 40 + 10, 1);
+      }
+
+      const texture = new THREE.CanvasTexture(texCanvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(4, 4);
+      return texture;
+    }
+
+    const buildingTex = createSkyscraperTexture();
+    const woodTex = createWoodTexture();
+
+    // --------------------------------------------------------------------------
+    // 3. LIGHTING SYSTEM
+    // --------------------------------------------------------------------------
+    // Ambient light (Deep nocturnal blue)
+    const ambientLight = new THREE.AmbientLight(0x0a1628, 1.2);
+    scene.add(ambientLight);
+
+    // Directional moonlight (Cool cyan rim light)
+    const moonLight = new THREE.DirectionalLight(0x38bdf8, 2.5);
+    moonLight.position.set(100, 300, 150);
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.width = 2048;
+    moonLight.shadow.mapSize.height = 2048;
+    moonLight.shadow.camera.near = 10;
+    moonLight.shadow.camera.far = 800;
+    moonLight.shadow.camera.left = -150;
+    moonLight.shadow.camera.right = 150;
+    moonLight.shadow.camera.top = 150;
+    moonLight.shadow.camera.bottom = -150;
+    scene.add(moonLight);
+
+    // Warm Interior Spotlight (inside the living room house)
+    const interiorFireLight = new THREE.PointLight(0xff7700, 3.5, 30);
+    interiorFireLight.position.set(0, 18, -48);
+    scene.add(interiorFireLight);
+
+    const interiorLoungeLight = new THREE.PointLight(0xffe2b0, 2.0, 35);
+    interiorLoungeLight.position.set(0, 22, -42);
+    scene.add(interiorLoungeLight);
+
+    // --------------------------------------------------------------------------
+    // 4. PROCEDURAL CITY GENERATION
+    // --------------------------------------------------------------------------
+    const cityGroup = new THREE.Group();
+    scene.add(cityGroup);
+
+    // Ground plane with road grid
+    const groundGeo = new THREE.PlaneGeometry(1600, 1600, 32, 32);
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x050a14,
+      roughness: 0.9,
+      metalness: 0.2
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0;
+    ground.receiveShadow = true;
+    cityGroup.add(ground);
+
+    // Glowing road grid lines
+    const gridHelper = new THREE.GridHelper(1400, 70, 0x00f0ff, 0x0c2744);
+    gridHelper.position.y = 0.2;
+    cityGroup.add(gridHelper);
+
+    // Building materials
+    const buildingMat = new THREE.MeshStandardMaterial({
+      color: 0x111c30,
+      map: buildingTex,
+      roughness: 0.3,
+      metalness: 0.8,
+      bumpMap: buildingTex,
+      bumpScale: 0.05
+    });
+
+    const roofMat = new THREE.MeshStandardMaterial({
+      color: 0x090f1d,
+      roughness: 0.5,
+      metalness: 0.6
+    });
+
+    const neonMatCyan = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+    const neonMatAmber = new THREE.MeshBasicMaterial({ color: 0xffaa40 });
+
+    // Procedural Skyscrapers
+    const buildingCount = 95;
+    const houseCoords = { x: 0, z: -40 }; // Keep clearance around the destination house
+
+    for (let i = 0; i < buildingCount; i++) {
+      let x = (Math.random() - 0.5) * 700;
+      let z = (Math.random() - 0.5) * 700;
+
+      // Ensure open flight corridor for drone descent & house position
+      if (Math.abs(x) < 45 && z > -90 && z < 180) {
+        x += (x > 0 ? 55 : -55);
+      }
+
+      const width = Math.random() * 25 + 18;
+      const depth = Math.random() * 25 + 18;
+      const height = Math.random() * 120 + 40;
+
+      const bGeo = new THREE.BoxGeometry(width, height, depth);
+      const building = new THREE.Mesh(bGeo, buildingMat);
+      building.position.set(x, height / 2, z);
+      building.castShadow = true;
+      building.receiveShadow = true;
+      cityGroup.add(building);
+
+      // Rooftop structure / antenna
+      const roofH = Math.random() * 8 + 3;
+      const roofBox = new THREE.Mesh(new THREE.BoxGeometry(width * 0.6, roofH, depth * 0.6), roofMat);
+      roofBox.position.set(x, height + roofH / 2, z);
+      cityGroup.add(roofBox);
+
+      // Rooftop neon beacon or antenna
+      if (Math.random() > 0.4) {
+        const antennaGeo = new THREE.CylinderGeometry(0.2, 0.4, 15, 6);
+        const antenna = new THREE.Mesh(antennaGeo, roofMat);
+        antenna.position.set(x, height + roofH + 7.5, z);
+        cityGroup.add(antenna);
+
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 8), neonMatAmber);
+        beacon.position.set(x, height + roofH + 15, z);
+        cityGroup.add(beacon);
+      }
+
+      // Emissive edge lights on signature buildings
+      if (Math.random() > 0.6) {
+        const stripGeo = new THREE.BoxGeometry(width + 0.5, 0.8, depth + 0.5);
+        const strip = new THREE.Mesh(stripGeo, neonMatCyan);
+        strip.position.set(x, height, z);
+        cityGroup.add(strip);
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // 5. PROCEDURAL LUXURY MODERN HOUSE & PENTHOUSE INTERIOR
+    // --------------------------------------------------------------------------
+    const houseGroup = new THREE.Group();
+    houseGroup.position.set(0, 0, 0);
+    scene.add(houseGroup);
+
+    const houseBaseY = 16; // Elevation of the luxury cantilever villa
+
+    // Main Cantilever Concrete Platform (Structure Base)
+    const platformGeo = new THREE.BoxGeometry(36, 1.8, 38);
+    const platformMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.7,
+      metalness: 0.1
+    });
+    const platform = new THREE.Mesh(platformGeo, platformMat);
+    platform.position.set(0, houseBaseY, -42);
+    platform.receiveShadow = true;
+    platform.castShadow = true;
+    houseGroup.add(platform);
+
+    // Support pillars beneath cantilever
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.8 });
+    const p1 = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, houseBaseY, 16), pillarMat);
+    p1.position.set(-14, houseBaseY / 2, -40);
+    const p2 = p1.clone();
+    p2.position.set(14, houseBaseY / 2, -40);
+    houseGroup.add(p1, p2);
+
+    // Outdoor Terrace Floor (Teak Wood Planks)
+    const terraceGeo = new THREE.BoxGeometry(34, 0.2, 14);
+    const terraceMat = new THREE.MeshStandardMaterial({
+      map: woodTex,
+      roughness: 0.4,
+      metalness: 0.1
+    });
+    const terrace = new THREE.Mesh(terraceGeo, terraceMat);
+    terrace.position.set(0, houseBaseY + 1.0, -28);
+    terrace.receiveShadow = true;
+    houseGroup.add(terrace);
+
+    // Infinity Reflection Pool
+    const poolGeo = new THREE.BoxGeometry(16, 0.4, 6);
+    const poolMat = new THREE.MeshPhysicalMaterial({
+      color: 0x0284c7,
+      roughness: 0.05,
+      transmission: 0.85,
+      thickness: 1.2,
+      ior: 1.33,
+      reflectivity: 0.95
+    });
+    const pool = new THREE.Mesh(poolGeo, poolMat);
+    pool.position.set(7, houseBaseY + 1.0, -25);
+    houseGroup.add(pool);
+
+    // Glass Railing on Terrace
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.28,
+      roughness: 0.05,
+      metalness: 0.1,
+      transmission: 0.9,
+      ior: 1.5
+    });
+    const railingGeo = new THREE.BoxGeometry(34, 2.2, 0.15);
+    const railing = new THREE.Mesh(railingGeo, glassMat);
+    railing.position.set(0, houseBaseY + 2.1, -21.2);
+    houseGroup.add(railing);
+
+    // --- INTERIOR ROOM ENCLOSURE ---
+    // Interior Polished Terrazzo Floor
+    const floorGeo = new THREE.BoxGeometry(34, 0.2, 22);
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x111625,
+      roughness: 0.2,
+      metalness: 0.4
+    });
+    const interiorFloor = new THREE.Mesh(floorGeo, floorMat);
+    interiorFloor.position.set(0, houseBaseY + 1.0, -46);
+    interiorFloor.receiveShadow = true;
+    houseGroup.add(interiorFloor);
+
+    // Ceiling with Warm Wood Slat Panels
+    const ceilingGeo = new THREE.BoxGeometry(34, 0.4, 24);
+    const ceilingMat = new THREE.MeshStandardMaterial({
+      map: woodTex,
+      roughness: 0.6
+    });
+    const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+    ceiling.position.set(0, houseBaseY + 9.5, -45);
+    houseGroup.add(ceiling);
+
+    // Back Accent Feature Wall (Dark Stone with integrated fireplace)
+    const backWallGeo = new THREE.BoxGeometry(34, 8.5, 1);
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x182032, roughness: 0.8 });
+    const backWall = new THREE.Mesh(backWallGeo, wallMat);
+    backWall.position.set(0, houseBaseY + 5.25, -57);
+    backWall.receiveShadow = true;
+    houseGroup.add(backWall);
+
+    // Left and Right Architectural Walls
+    const sideWallGeo = new THREE.BoxGeometry(1, 8.5, 23);
+    const leftWall = new THREE.Mesh(sideWallGeo, wallMat);
+    leftWall.position.set(-16.5, houseBaseY + 5.25, -45.5);
+    const rightWall = new THREE.Mesh(sideWallGeo, wallMat);
+    rightWall.position.set(16.5, houseBaseY + 5.25, -45.5);
+    houseGroup.add(leftWall, rightWall);
+
+    // Linear Ribbon Fireplace (Emissive warm core)
+    const fireBoxGeo = new THREE.BoxGeometry(12, 1.2, 0.8);
+    const fireBoxMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+    const fireplace = new THREE.Mesh(fireBoxGeo, fireBoxMat);
+    fireplace.position.set(0, houseBaseY + 2.5, -56.2);
+    houseGroup.add(fireplace);
+
+    // Large Abstract Wall Art above fireplace
+    const artGeo = new THREE.BoxGeometry(14, 4.5, 0.1);
+    const artMat = new THREE.MeshStandardMaterial({
+      color: 0x0f3460,
+      roughness: 0.3,
+      emissive: 0x082040,
+      emissiveIntensity: 0.4
+    });
+    const artPiece = new THREE.Mesh(artGeo, artMat);
+    artPiece.position.set(0, houseBaseY + 6.2, -56.4);
+    houseGroup.add(artPiece);
+
+    // Minimalist Luxury Sectional Sofa
+    const sofaMat = new THREE.MeshStandardMaterial({ color: 0x2e384d, roughness: 0.9 });
+    const sofaBaseGeo = new THREE.BoxGeometry(14, 1.2, 5.5);
+    const sofaBase = new THREE.Mesh(sofaBaseGeo, sofaMat);
+    sofaBase.position.set(-2, houseBaseY + 1.6, -46);
+    sofaBase.castShadow = true;
+
+    const sofaBackGeo = new THREE.BoxGeometry(14, 2.2, 1.2);
+    const sofaBack = new THREE.Mesh(sofaBackGeo, sofaMat);
+    sofaBack.position.set(-2, houseBaseY + 2.4, -48.2);
+    houseGroup.add(sofaBase, sofaBack);
+
+    // Luxury Marble Coffee Table
+    const tableGeo = new THREE.BoxGeometry(6.5, 0.6, 3.2);
+    const tableMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.15, metalness: 0.3 });
+    const coffeeTable = new THREE.Mesh(tableGeo, tableMat);
+    coffeeTable.position.set(-2, houseBaseY + 1.3, -40.5);
+    coffeeTable.castShadow = true;
+    houseGroup.add(coffeeTable);
+
+    // Open Sliding Glass Door Frames (Portals for the drone entry)
+    const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, roughness: 0.2, metalness: 0.9 });
+    const doorFrameLeft = new THREE.Mesh(new THREE.BoxGeometry(10, 8.5, 0.3), glassMat);
+    doorFrameLeft.position.set(-11.5, houseBaseY + 5.25, -34.5);
+    const doorFrameRight = new THREE.Mesh(new THREE.BoxGeometry(10, 8.5, 0.3), glassMat);
+    doorFrameRight.position.set(11.5, houseBaseY + 5.25, -34.5);
+    houseGroup.add(doorFrameLeft, doorFrameRight);
+
+    // --------------------------------------------------------------------------
+    // 6. HOLOGRAPHIC 3D INCLINE GRAPH TRAJECTORY & WAYPOINT SYSTEM
+    // --------------------------------------------------------------------------
+    const trajectoryGroup = new THREE.Group();
+    scene.add(trajectoryGroup);
+
+    // Define 3D flight trajectory control points
+    const trajectoryPoints = [
+      new THREE.Vector3(0, 185, 230),    // Point 0: High orbit altitude
+      new THREE.Vector3(18, 120, 140),   // Point 1: Bank into city canyon
+      new THREE.Vector3(-12, 65, 55),    // Point 2: Steep incline dive
+      new THREE.Vector3(4, 30, -5),      // Point 3: Leveling at villa rooftop
+      new THREE.Vector3(0, 19.5, -28),   // Point 4: Glide across terrace pool
+      new THREE.Vector3(0, 18.2, -47)    // Point 5: Enter living room interior
+    ];
+
+    const flightSpline = new THREE.CatmullRomCurve3(trajectoryPoints, false, 'catmullrom', 0.25);
+
+    // 3D Tube Geometry along trajectory (Holographic Graph Line)
+    const splineGeo = new THREE.TubeGeometry(flightSpline, 160, 0.4, 8, false);
+    const splineMat = new THREE.MeshBasicMaterial({
+      color: 0x00f0ff,
+      transparent: true,
+      opacity: 0.65,
+      wireframe: true
+    });
+    const trajectoryLine = new THREE.Mesh(splineGeo, splineMat);
+    trajectoryGroup.add(trajectoryLine);
+
+    // Incline Flight Waypoint Rings along the path
+    const ringGeo = new THREE.TorusGeometry(6, 0.15, 8, 32);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.5 });
+
+    [0.15, 0.38, 0.62, 0.82].forEach((t, index) => {
+      const pos = flightSpline.getPointAt(t);
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.copy(pos);
+      ring.lookAt(flightSpline.getPointAt(Math.min(1, t + 0.05)));
+      trajectoryGroup.add(ring);
+    });
+
+    // Atmospheric Dust & Light Motifs
+    const particleCount = 750;
+    const partGeo = new THREE.BufferGeometry();
+    const partPositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      partPositions[i] = (Math.random() - 0.5) * 500;
+      partPositions[i + 1] = Math.random() * 200;
+      partPositions[i + 2] = (Math.random() - 0.5) * 500;
+    }
+    partGeo.setAttribute('position', new THREE.BufferAttribute(partPositions, 3));
+    const partMat = new THREE.PointsMaterial({
+      color: 0x38bdf8,
+      size: 1.2,
+      transparent: true,
+      opacity: 0.6
+    });
+    const particleCloud = new THREE.Points(partGeo, partMat);
+    scene.add(particleCloud);
+
+    // --------------------------------------------------------------------------
+    // 7. DUAL-LAYER DAMPING ENGINE & SCROLL DRIVER
+    // --------------------------------------------------------------------------
+    let targetProgress = 0;
+    let currentProgress = 0;
+    const dampingFactor = 0.065; // Ultra-smooth cinematic flight damping
+
+    let mouseTargetX = 0, mouseTargetY = 0;
+    let mouseCurrentX = 0, mouseCurrentY = 0;
+
+    function getScrollProgress() {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return 0;
+      return Math.max(0, Math.min(1, scrollTop / maxScroll));
+    }
+
+    window.addEventListener('scroll', () => {
+      targetProgress = getScrollProgress();
+    }, { passive: true });
+
+    window.addEventListener('pointermove', (e) => {
+      mouseTargetX = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseTargetY = -(e.clientY / window.innerHeight) * 2 + 1;
+    }, { passive: true });
+
+    window.scrollToRatio = function(ratio) {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo({
+        top: ratio * maxScroll,
+        behavior: 'smooth'
+      });
+    };
+
+    // --------------------------------------------------------------------------
+    // 8. 2D INCLINE GRAPH WIDGET RENDERER
+    // --------------------------------------------------------------------------
+    const graphCanvas = document.getElementById('incline-graph-canvas');
+    const graphCtx = graphCanvas ? graphCanvas.getContext('2d') : null;
+
+    function drawInclineHUDGraph(progress) {
+      if (!graphCtx) return;
+      const w = graphCanvas.width;
+      const h = graphCanvas.height;
+
+      graphCtx.clearRect(0, 0, w, h);
+
+      // Grid background lines
+      graphCtx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
+      graphCtx.lineWidth = 1;
+      for (let x = 0; x < w; x += 35) {
+        graphCtx.beginPath();
+        graphCtx.moveTo(x, 0);
+        graphCtx.lineTo(x, h);
+        graphCtx.stroke();
+      }
+      for (let y = 0; y < h; y += 15) {
+        graphCtx.beginPath();
+        graphCtx.moveTo(0, y);
+        graphCtx.lineTo(w, y);
+        graphCtx.stroke();
+      }
+
+      // Theoretical Incline Slope Curve
+      graphCtx.beginPath();
+      graphCtx.moveTo(10, 10);
+      graphCtx.bezierCurveTo(w * 0.35, 12, w * 0.6, h - 14, w - 10, h - 8);
+      graphCtx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+      graphCtx.lineWidth = 2;
+      graphCtx.stroke();
+
+      // Drone current position marker along graph
+      const t = Math.max(0, Math.min(1, progress));
+      const markerX = 10 + (w - 20) * t;
+      // Bezier Y evaluation
+      const u = 1 - t;
+      const markerY = (u * u * u * 10) + (3 * u * u * t * 12) + (3 * u * t * t * (h - 14)) + (t * t * t * (h - 8));
+
+      // Draw glowing drone blip
+      graphCtx.beginPath();
+      graphCtx.arc(markerX, markerY, 4, 0, Math.PI * 2);
+      graphCtx.fillStyle = '#ffaa40';
+      graphCtx.shadowColor = '#ffaa40';
+      graphCtx.shadowBlur = 10;
+      graphCtx.fill();
+    }
+
+    // --------------------------------------------------------------------------
+    // 9. TELEMETRY HUD LIVE UPDATER
+    // --------------------------------------------------------------------------
+    const hudAlt = document.getElementById('hud-alt');
+    const hudSpeed = document.getElementById('hud-speed');
+    const hudModeText = document.getElementById('flight-mode-text');
+    const slopeAngleText = document.getElementById('slope-angle-text');
+    const altFillBar = document.getElementById('alt-fill-bar');
+    const hudReticle = document.getElementById('hud-reticle');
+    const cards = document.querySelectorAll('.glass-card');
+
+    function updateHUDTelemetry(progress, elapsed) {
+      // Altitude interpolation (1,850m down to 42m)
+      const currentAlt = Math.round(1850 - progress * (1850 - 42));
+      if (hudAlt) hudAlt.textContent = `${currentAlt.toLocaleString()} M`;
+
+      // Speed calculation (Accelerates during dive, decelerates at docking)
+      let speedVal = 142;
+      if (progress < 0.2) speedVal = 140 + progress * 100;
+      else if (progress < 0.6) speedVal = 210 + Math.sin(progress * Math.PI) * 45;
+      else if (progress < 0.85) speedVal = 120 - (progress - 0.6) * 300;
+      else speedVal = Math.max(8, 35 - (progress - 0.85) * 180);
+      if (hudSpeed) hudSpeed.textContent = `${Math.round(speedVal)} KM/H`;
+
+      // Dynamic Flight Mode
+      if (progress < 0.25) {
+        if (hudModeText) hudModeText.textContent = 'FLIGHT MODE: AERIAL HIGH-RECON';
+        if (slopeAngleText) slopeAngleText.textContent = '-12.0° GLIDE';
+      } else if (progress < 0.65) {
+        if (hudModeText) hudModeText.textContent = 'FLIGHT MODE: VECTOR INCLINE DIVE';
+        if (slopeAngleText) slopeAngleText.textContent = '-48.5° SLOPE';
+      } else if (progress < 0.85) {
+        if (hudModeText) hudModeText.textContent = 'FLIGHT MODE: VILLA PERIMETER APPROACH';
+        if (slopeAngleText) slopeAngleText.textContent = '-8.2° LEVELING';
+      } else {
+        if (hudModeText) hudModeText.textContent = 'FLIGHT MODE: INTERIOR DWELLING DOCKED';
+        if (slopeAngleText) slopeAngleText.textContent = '0.0° HOVER';
+      }
+
+      // Altitude bar
+      if (altFillBar) altFillBar.style.height = `${progress * 100}%`;
+
+      // Reticle parallax movement
+      if (hudReticle) {
+        hudReticle.style.transform = `translate(calc(-50% + ${mouseCurrentX * 35}px), calc(-50% + ${-mouseCurrentY * 25}px)) rotate(${mouseCurrentX * 4}deg)`;
+      }
+
+      // Narrative cards fade-in trigger
+      const sectionIndex = Math.min(cards.length - 1, Math.floor(progress * cards.length));
+      cards.forEach((card, idx) => {
+        if (idx === sectionIndex) {
+          card.classList.add('is-visible');
+        } else {
+          card.classList.remove('is-visible');
+        }
+      });
+
+      drawInclineHUDGraph(progress);
+    }
+
+    // --------------------------------------------------------------------------
+    // 10. PROCEDURAL DRONE SOUND SYNTHESIZER (WEB AUDIO API)
+    // --------------------------------------------------------------------------
+    let audioCtx = null;
+    let droneOsc = null;
+    let droneGain = null;
+    let isAudioActive = false;
+
+    const audioToggleBtn = document.getElementById('audio-toggle');
+    const audioLabel = document.getElementById('audio-label');
+    const audioIcon = document.getElementById('audio-icon');
+
+    function toggleDroneAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        droneOsc = audioCtx.createOscillator();
+        const subOsc = audioCtx.createOscillator();
+        droneGain = audioCtx.createGain();
+
+        droneOsc.type = 'sawtooth';
+        droneOsc.frequency.setValueAtTime(55, audioCtx.currentTime); // 55Hz low rotor drone
+
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(110, audioCtx.currentTime);
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(280, audioCtx.currentTime);
+
+        droneOsc.connect(filter);
+        subOsc.connect(filter);
+        filter.connect(droneGain);
+        droneGain.connect(audioCtx.destination);
+
+        droneGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        droneOsc.start();
+        subOsc.start();
+        isAudioActive = true;
+      } else {
+        if (isAudioActive) {
+          droneGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+          isAudioActive = false;
+        } else {
+          droneGain.gain.setTargetAtTime(0.08, audioCtx.currentTime, 0.1);
+          isAudioActive = true;
+        }
+      }
+
+      if (isAudioActive) {
+        audioToggleBtn.classList.add('active');
+        audioIcon.textContent = '🔊';
+        audioLabel.textContent = 'DRONE HUM ON';
+      } else {
+        audioToggleBtn.classList.remove('active');
+        audioIcon.textContent = '🔇';
+        audioLabel.textContent = 'AUDIO HUM';
+      }
+    }
+
+    if (audioToggleBtn) audioToggleBtn.addEventListener('click', toggleDroneAudio);
+
+    // Toggle 3D trajectory visibility
+    const graphToggleBtn = document.getElementById('graph-toggle');
+    if (graphToggleBtn) {
+      graphToggleBtn.addEventListener('click', () => {
+        trajectoryGroup.visible = !trajectoryGroup.visible;
+        graphToggleBtn.classList.toggle('active', trajectoryGroup.visible);
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // 11. MASTER ANIMATION & RENDER LOOP
+    // --------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    // LookAt Target Vector with damping
+    const currentLookTarget = new THREE.Vector3(0, 20, -50);
+    const targetLookVector = new THREE.Vector3();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // 1. Damped scroll progress calculation
+      currentProgress += (targetProgress - currentProgress) * dampingFactor;
+
+      // 2. Smooth mouse parallax
+      mouseCurrentX += (mouseTargetX - mouseCurrentX) * 0.06;
+      mouseCurrentY += (mouseTargetY - mouseCurrentY) * 0.06;
+
+      // 3. Interpolate drone camera position along 3D flight spline
+      const camPos = flightSpline.getPointAt(Math.max(0, Math.min(0.999, currentProgress)));
+      
+      // Layer subtle mouse gimbal tilt & idle rotor vibration
+      const rotorVibeY = Math.sin(elapsed * 24) * 0.04;
+      const rotorVibeX = Math.cos(elapsed * 18) * 0.03;
+
+      camera.position.set(
+        camPos.x + mouseCurrentX * 3.5 + rotorVibeX,
+        camPos.y + mouseCurrentY * 2.0 + rotorVibeY,
+        camPos.z
+      );
+
+      // 4. Interpolate camera look-at direction along forward tangent
+      const forwardTangent = flightSpline.getPointAt(Math.min(1.0, currentProgress + 0.08));
+      
+      // When inside the house (progress > 0.85), gently pivot view toward cozy fireplace and interior lounge
+      if (currentProgress > 0.85) {
+        const interiorTarget = new THREE.Vector3(
+          -2 + mouseCurrentX * 4,
+          houseBaseY + 3.5 + mouseCurrentY * 2,
+          -52
+        );
+        targetLookVector.lerp(interiorTarget, 0.1);
+      } else {
+        targetLookVector.set(
+          forwardTangent.x + mouseCurrentX * 12,
+          forwardTangent.y + mouseCurrentY * 8 - 4,
+          forwardTangent.z
+        );
+      }
+
+      currentLookTarget.lerp(targetLookVector, 0.08);
+      camera.lookAt(currentLookTarget);
+
+      // Camera roll based on bank angle
+      camera.rotation.z = -mouseCurrentX * 0.08 + (currentProgress > 0.2 && currentProgress < 0.6 ? Math.sin(currentProgress * Math.PI) * -0.12 : 0);
+
+      // 5. Fireplace flicker animation
+      interiorFireLight.intensity = 3.2 + Math.sin(elapsed * 12) * 0.6 + Math.cos(elapsed * 7) * 0.4;
+
+      // 6. Update HUD Telemetry
+      updateHUDTelemetry(currentProgress, elapsed);
+
+      // 7. Modulate audio pitch with drone dive speed
+      if (isAudioActive && droneOsc) {
+        const divePitchMod = 55 + currentProgress * 28 + Math.abs(mouseCurrentX) * 10;
+        droneOsc.frequency.setTargetAtTime(divePitchMod, audioCtx.currentTime, 0.1);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // --------------------------------------------------------------------------
+    // 12. RESIZE LISTENER & LOADER DISMISS
+    // --------------------------------------------------------------------------
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Hide loader after procedural city is ready
+      setTimeout(() => {
+        const loader = document.getElementById('loader');
+        if (loader) loader.classList.add('hidden');
+      }, 700);
+    });
+
+    // Start master loop
+    animate();
+  </script>
+</body>
+</html>

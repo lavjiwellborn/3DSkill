@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="6-DOF Spline Camera Fly-Through — Procedural 3D architectural tunnel tour with Catmull-Rom spline flight path, banking Dutch roll physics, and lookahead orientation in WebGL.">
+  <meta name="theme-color" content="#020617">
   <title>6-DOF Spline Fly-Through — Procedural 3D</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,9 +16,30 @@
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* ===== LOADING SCREEN ===== */
+    .loading-screen {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #020617;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+    }
+    .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .spinner {
+      width: 46px; height: 46px;
+      border: 3px solid rgba(56, 189, 248, 0.15);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== CANVAS VIEWPORT ===== */
     #webgl-canvas {
       position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
     }
+
+    /* ===== OVERLAY SCROLL ARCHITECTURE ===== */
     .scroll-container { position: relative; z-index: 10; pointer-events: none; }
     .scroll-section {
       min-height: 100vh; display: flex; align-items: center; padding: 6rem 8%;
@@ -26,12 +49,14 @@
     .scroll-section:first-child {
       justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 12vh;
     }
+
+    /* ===== GLASSMORPHIC CARDS ===== */
     .glass-card {
       max-width: 520px; padding: 2.5rem;
-      background: rgba(15, 23, 42, 0.75);
+      background: rgba(15, 23, 42, 0.78);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(56, 189, 248, 0.25);
+      border: 1px solid rgba(56, 189, 248, 0.28);
       border-radius: 24px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
       pointer-events: auto;
@@ -56,14 +81,26 @@
   </style>
 </head>
 <body>
-  <canvas id="webgl-canvas"></canvas>
+
+  <noscript>
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#020617;color:#f8fafc;font-family:system-ui;text-align:center;padding:2rem;">
+      <p>This experience requires JavaScript and WebGL. Please enable JavaScript in your browser.</p>
+    </div>
+  </noscript>
+
+  <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #38bdf8; letter-spacing: 0.08em;" id="loading-text">CALIBRATING 6-DOF FLIGHT</p>
+  </div>
+
+  <canvas id="webgl-canvas" role="img" aria-label="Interactive 6-DOF Procedural 3D Camera Flight Tour"></canvas>
 
   <main class="scroll-container">
     <section class="scroll-section">
       <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
         <span class="badge">6-DOF Scrollytelling</span>
         <h1>Catmull-Rom Flight</h1>
-        <p>Scroll down to pilot the camera along a 3D spline trajectory.</p>
+        <p>Scroll down to pilot the camera along a 3D spline trajectory through an architectural complex.</p>
       </div>
     </section>
 
@@ -98,89 +135,83 @@
     const canvas = document.getElementById('webgl-canvas');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 0.95;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020617, 0.035);
+    scene.fog = new THREE.FogExp2(0x020617, 0.04);
     renderer.setClearColor(0x020617);
 
-    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
 
-    // Cross-Lighting Rig
+    // Lighting Rig
     scene.add(new THREE.AmbientLight(0x0f172a, 0.5));
-    const key = new THREE.DirectionalLight(0x38bdf8, 1.3);
+    const key = new THREE.DirectionalLight(0x38bdf8, 1.4);
     key.position.set(6, 12, 6);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
-    key.shadow.bias = -0.0001;
     scene.add(key);
 
-    const rim = new THREE.DirectionalLight(0xf43f5e, 0.75);
+    const rim = new THREE.DirectionalLight(0xf43f5e, 0.7);
     rim.position.set(-6, 4, -6);
     scene.add(rim);
 
-    // Build 3D Architectural Scene with Tunnel Pylons
-    const matPylon = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.9 });
-    const matGlow = new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x38bdf8, emissiveIntensity: 2.5 });
+    // Architectural Sci-Fi Corridor / Complex
+    const complex = new THREE.Group();
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.8 });
+    const cyanGlow = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00f0ff, emissiveIntensity: 2.5 });
+    const pinkGlow = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xf43f5e, emissiveIntensity: 2.2 });
 
-    for (let i = 0; i < 8; i++) {
-      const z = i * -6;
-      // Arch pylon
-      const arch = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.25, 8, 24, Math.PI), matPylon);
-      arch.position.set(0, 0, z);
-      scene.add(arch);
+    // Waypoint Gate Arches
+    for (let z = -15; z <= 15; z += 5) {
+      const arch = new THREE.Group();
+      const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 0.4), darkMat);
+      p1.position.set(-3.5, 3, 0);
+      arch.add(p1);
 
-      const glowRing = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.05, 6, 24, Math.PI), matGlow);
-      glowRing.position.set(0, 0, z);
-      scene.add(glowRing);
+      const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 0.4), darkMat);
+      p2.position.set(3.5, 3, 0);
+      arch.add(p2);
+
+      const top = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.4, 0.4), darkMat);
+      top.position.set(0, 6, 0);
+      arch.add(top);
+
+      const neon = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.08, 0.42), z % 10 === 0 ? cyanGlow : pinkGlow);
+      neon.position.set(0, 5.8, 0);
+      arch.add(neon);
+
+      arch.position.z = z;
+      complex.add(arch);
     }
 
-    // Terminal Quantum Core
-    const coreMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x38bdf8, emissiveIntensity: 3.5 });
-    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.2, 2), coreMat);
-    core.position.set(0, 1.5, -45);
-    scene.add(core);
+    // Core Quantum Singularity
+    const coreGeo = new THREE.IcosahedronGeometry(1.2, 1);
+    const coreMesh = new THREE.Mesh(coreGeo, cyanGlow);
+    coreMesh.position.set(0, 2, -18);
+    complex.add(coreMesh);
 
-    // Atmospheric Motes
-    const pCount = 200;
-    const pPos = new Float32Array(pCount * 3);
-    for (let i = 0; i < pCount; i++) {
-      pPos[i * 3]     = (Math.random() - 0.5) * 14;
-      pPos[i * 3 + 1] = Math.random() * 8;
-      pPos[i * 3 + 2] = -Math.random() * 50;
-    }
-    const pGeo = new THREE.BufferGeometry();
-    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-    const pMat = new THREE.PointsMaterial({
-      color: 0x38bdf8, size: 0.04, transparent: true, opacity: 0.6, depthWrite: false
-    });
-    scene.add(new THREE.Points(pGeo, pMat));
+    scene.add(complex);
 
-    // 6-DOF Spline Trajectory
-    const flightSpline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 2, 8),
-      new THREE.Vector3(3, 4, -8),
-      new THREE.Vector3(-3, 2.5, -22),
-      new THREE.Vector3(2, 3.5, -34),
-      new THREE.Vector3(0, 1.5, -41),
+    // Catmull-Rom 3D Spline Path
+    const spline = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 2.5, 18),
+      new THREE.Vector3(4.5, 4.0, 8),
+      new THREE.Vector3(-3.5, 1.8, -2),
+      new THREE.Vector3(2.5, 5.0, -10),
+      new THREE.Vector3(0, 2.0, -15),
     ], false, 'catmullrom', 0.5);
 
-    const lookTargetSpline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 1.5, 0),
-      new THREE.Vector3(0, 2, -15),
-      new THREE.Vector3(0, 1.5, -30),
-      new THREE.Vector3(0, 1.5, -45),
-      new THREE.Vector3(0, 1.5, -45),
-    ]);
-
+    // Scroll & Mouse Tracking
     let targetProgress = 0, currentProgress = 0;
+    let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
     const damp = prefersReducedMotion ? 0.25 : 0.07;
 
     function getProgress() {
@@ -188,34 +219,55 @@
       return max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
     }
     window.addEventListener('scroll', () => { targetProgress = getProgress(); }, { passive: true });
+    window.addEventListener('pointermove', (e) => {
+      mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+    }, { passive: true });
 
     function smoothstep(t) { return t * t * (3 - 2 * t); }
 
+    const clock = new THREE.Clock();
+
     function animate() {
       requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
 
       currentProgress += (targetProgress - currentProgress) * damp;
-      const p = smoothstep(Math.max(0, Math.min(1, currentProgress)));
+      const t = smoothstep(currentProgress);
 
-      const camPos = flightSpline.getPointAt(p);
-      const lookPos = lookTargetSpline.getPointAt(p);
-      camera.position.copy(camPos);
-      camera.lookAt(lookPos);
+      const pt = spline.getPointAt(t);
+      const lookaheadT = Math.min(1, t + 0.04);
+      const lookPt = spline.getPointAt(lookaheadT);
 
-      // Banking Roll
-      const tangent = flightSpline.getTangentAt(p);
-      camera.rotation.z = tangent.x * 0.2;
+      camera.position.copy(pt);
 
-      core.rotation.y += 0.01;
-      core.rotation.x += 0.005;
+      curMouseX += (mouseX - curMouseX) * 0.05;
+      curMouseY += (mouseY - curMouseY) * 0.05;
+      camera.position.x += curMouseX * 0.4;
+      camera.position.y += curMouseY * 0.25;
+
+      camera.lookAt(lookPt.x, lookPt.y, lookPt.z);
+
+      // Dutch Roll banking into curves
+      const tangent = spline.getTangentAt(t);
+      camera.rotation.z = -tangent.x * 0.25;
+
+      if (!prefersReducedMotion) {
+        coreMesh.rotation.y = elapsed * 0.8;
+        coreMesh.rotation.x = elapsed * 0.4;
+      }
 
       renderer.render(scene, camera);
     }
 
     function onResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const w = window.innerWidth, h = window.innerHeight;
+      const aspect = w / h;
+      camera.aspect = aspect;
+      camera.fov = aspect < 1.0 ? Math.min(75, 50 / aspect * 0.78) : 50;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, w < 768 ? 1.5 : 2.0));
     }
     window.addEventListener('resize', onResize);
 
@@ -226,6 +278,14 @@
     cards.forEach((c) => observer.observe(c));
 
     animate();
+    requestAnimationFrame(() => {
+      document.getElementById('loading-screen').classList.add('hidden');
+    });
+
+    setTimeout(() => {
+      const ls = document.getElementById('loading-screen');
+      if (ls && !ls.classList.contains('hidden')) ls.classList.add('hidden');
+    }, 8000);
   </script>
 </body>
 </html>

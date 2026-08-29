@@ -1,6 +1,8 @@
 # Complete Scaffold & Overlay Architecture
 
-This file provides **production-ready, copy-paste scaffolds** for procedural 3D scroll websites. Every core subsystem (tone mapping, three-point cross lighting, contact shadow catcher, non-linear damping, interactive cursor parallax, mobile FOV compensation, loading transitions, and glassmorphic text overlays) is pre-wired.
+This file provides **production-ready, copy-paste scaffolds** for procedural 3D scroll websites. Every core subsystem (tone mapping, three-point cross lighting, contact shadow catcher, non-linear damping, interactive cursor parallax, mobile FOV compensation, loading transitions, glassmorphic text overlays, accessibility, and CDN error handling) is pre-wired.
+
+> **IMPORTANT**: Always start from this scaffold. Do NOT piece together fragments from other reference files. This scaffold already includes all essential subsystems.
 
 ---
 
@@ -136,14 +138,21 @@ This file provides **production-ready, copy-paste scaffolds** for procedural 3D 
 </head>
 <body>
 
-  <!-- Loading Screen -->
-  <div class="loading-screen" id="loading-screen">
-    <div class="spinner"></div>
-    <p style="margin-top: 1.2rem; font-size: 0.9rem; color: #64748b; letter-spacing: 0.05em;">INITIALIZING 3D ENGINE</p>
+  <!-- Accessibility: noscript fallback for no-JS environments -->
+  <noscript>
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:system-ui;text-align:center;padding:2rem;">
+      <p>This experience requires JavaScript and WebGL. Please enable JavaScript in your browser.</p>
+    </div>
+  </noscript>
+
+  <!-- Loading Screen (auto-dismissed after 8s timeout as safety net) -->
+  <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p style="margin-top: 1.2rem; font-size: 0.9rem; color: #64748b; letter-spacing: 0.05em;" id="loading-text">INITIALIZING 3D ENGINE</p>
   </div>
 
   <!-- Three.js Canvas -->
-  <canvas id="webgl-canvas"></canvas>
+  <canvas id="webgl-canvas" role="img" aria-label="Interactive 3D procedural scene"></canvas>
 
   <!-- Overlay Content -->
   <main class="scroll-container">
@@ -181,7 +190,21 @@ This file provides **production-ready, copy-paste scaffolds** for procedural 3D 
   </main>
 
   <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+    // CDN Import with version pinning
+    // To update Three.js version, change this single URL:
+    const THREE_CDN = 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+    let THREE;
+    try {
+      THREE = await import(THREE_CDN);
+    } catch (err) {
+      // Graceful CDN failure: show static fallback instead of blank page
+      console.error('Three.js CDN failed to load:', err);
+      document.getElementById('loading-text').textContent = 'Failed to load 3D engine. Showing static view.';
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.body.style.background = '#090d16';
+      // Optionally render a static CSS-only hero instead of crashing
+      throw err; // Stop execution cleanly
+    }
 
     // ===== 1. CORE SETUP =====
     const canvas = document.getElementById('webgl-canvas');
@@ -370,11 +393,21 @@ This file provides **production-ready, copy-paste scaffolds** for procedural 3D 
     }, { threshold: 0.2 });
     cards.forEach((c) => observer.observe(c));
 
-    // Remove loading screen on first frame
+    // Remove loading screen on first rendered frame
     animate();
     requestAnimationFrame(() => {
       document.getElementById('loading-screen').classList.add('hidden');
     });
+
+    // Safety net: always dismiss loading screen after 8 seconds
+    // (prevents infinite spinner if something silently fails)
+    setTimeout(() => {
+      const ls = document.getElementById('loading-screen');
+      if (ls && !ls.classList.contains('hidden')) {
+        ls.classList.add('hidden');
+        console.warn('Loading screen auto-dismissed after timeout.');
+      }
+    }, 8000);
   </script>
 </body>
 </html>

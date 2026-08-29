@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mode B Image Sequence Scrubber — High-performance in-memory RAM buffer frame preloader and sub-frame scroll scrubber for Apple-style product reveals.">
+  <meta name="theme-color" content="#020617">
   <title>Mode B: Image Sequence Frame Scrubber</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,9 +16,28 @@
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* ===== PRELOADER SCREEN ===== */
+    .preloader {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #020617;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.6s ease-out, visibility 0.6s ease-out;
+    }
+    .preloader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .progress-bar-container {
+      width: 260px; height: 4px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 1.2rem;
+    }
+    .progress-bar {
+      width: 0%; height: 100%; background: #38bdf8; transition: width 0.1s linear;
+    }
+
+    /* ===== CANVAS VIEWPORT ===== */
     #sequence-canvas {
       position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
     }
+
+    /* ===== OVERLAY SCROLL ARCHITECTURE ===== */
     .scroll-container { position: relative; z-index: 10; pointer-events: none; }
     .scroll-section {
       min-height: 100vh; display: flex; align-items: center; padding: 6rem 8%;
@@ -26,14 +47,16 @@
     .scroll-section:first-child {
       justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 15vh;
     }
+
+    /* ===== GLASSMORPHIC CARDS ===== */
     .glass-card {
       max-width: 520px; padding: 2.5rem;
-      background: rgba(15, 23, 42, 0.75);
+      background: rgba(15, 23, 42, 0.78);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(56, 189, 248, 0.25);
+      border: 1px solid rgba(56, 189, 248, 0.28);
       border-radius: 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.08);
       pointer-events: auto;
       opacity: 0; transform: translateY(30px);
       transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
@@ -41,6 +64,7 @@
     .glass-card.is-visible { opacity: 1; transform: translateY(0); }
     .glass-card h1, .glass-card h2 {
       font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.15; margin-bottom: 0.8rem; color: #ffffff;
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
     }
     .glass-card p { font-size: 1.1rem; line-height: 1.7; color: #94a3b8; }
     .badge {
@@ -55,7 +79,21 @@
   </style>
 </head>
 <body>
-  <canvas id="sequence-canvas"></canvas>
+
+  <noscript>
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#020617;color:#f8fafc;font-family:system-ui;text-align:center;padding:2rem;">
+      <p>This experience requires JavaScript to scrub through animation frames. Please enable JavaScript in your browser.</p>
+    </div>
+  </noscript>
+
+  <div class="preloader" id="preloader" role="status" aria-live="polite">
+    <p id="preloader-text" style="font-size: 0.85rem; letter-spacing: 0.1em; color: #94a3b8;">LOADING FRAMES 0%</p>
+    <div class="progress-bar-container" aria-hidden="true">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+  </div>
+
+  <canvas id="sequence-canvas" role="img" aria-label="Interactive frame-accurate image sequence animation"></canvas>
 
   <main class="scroll-container">
     <section class="scroll-section">
@@ -85,14 +123,18 @@
 
   <script>
     const canvas = document.getElementById('sequence-canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const frameCount = 100;
     const frames = [];
+    let loadedCount = 0;
 
     // Procedural Generator for Demonstration Frames
     function generateDemoFrames() {
+      const progressBar = document.getElementById('progress-bar');
+      const preloaderText = document.getElementById('preloader-text');
+
       for (let i = 0; i < frameCount; i++) {
         const offCanvas = document.createElement('canvas');
         offCanvas.width = 1920; offCanvas.height = 1080;
@@ -102,60 +144,80 @@
         oCtx.fillStyle = '#020617';
         oCtx.fillRect(0, 0, 1920, 1080);
 
-        // Animated Rotating Gyro Ring
-        const t = (i / frameCount) * Math.PI * 2;
-        oCtx.save();
-        oCtx.translate(960, 540);
-        oCtx.rotate(t);
-        
-        oCtx.strokeStyle = '#38bdf8';
-        oCtx.lineWidth = 12;
-        oCtx.shadowColor = '#38bdf8';
-        oCtx.shadowBlur = 30;
-
+        // Circular Orbital Track
+        oCtx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+        oCtx.lineWidth = 4;
         oCtx.beginPath();
-        oCtx.arc(0, 0, 260, 0, Math.PI * 2);
+        oCtx.ellipse(960, 540, 600, 260, 0, 0, Math.PI * 2);
         oCtx.stroke();
 
-        oCtx.strokeStyle = '#f43f5e';
-        oCtx.lineWidth = 8;
-        oCtx.beginPath();
-        oCtx.arc(0, 0, 180, 0, Math.PI * 2);
-        oCtx.stroke();
-        oCtx.restore();
+        // 3D Orbital Core Animation
+        const angle = (i / frameCount) * Math.PI * 2;
+        const cx = 960 + Math.cos(angle) * 600;
+        const cy = 540 + Math.sin(angle) * 260;
 
-        frames.push(offCanvas);
+        const radGrad = oCtx.createRadialGradient(cx, cy, 10, cx, cy, 140);
+        radGrad.addColorStop(0, '#38bdf8');
+        radGrad.addColorStop(0.5, '#0284c7');
+        radGrad.addColorStop(1, 'rgba(2, 132, 199, 0)');
+
+        oCtx.fillStyle = radGrad;
+        oCtx.beginPath();
+        oCtx.arc(cx, cy, 140, 0, Math.PI * 2);
+        oCtx.fill();
+
+        // Core Ring
+        oCtx.strokeStyle = '#ffffff';
+        oCtx.lineWidth = 3;
+        oCtx.beginPath();
+        oCtx.arc(cx, cy, 32, 0, Math.PI * 2);
+        oCtx.stroke();
+
+        const img = new Image();
+        img.src = offCanvas.toDataURL('image/jpeg', 0.85);
+        img.onload = () => {
+          loadedCount++;
+          const pct = Math.round((loadedCount / frameCount) * 100);
+          progressBar.style.width = pct + '%';
+          preloaderText.innerText = `LOADING FRAMES ${pct}%`;
+
+          if (loadedCount === frameCount) {
+            document.getElementById('preloader').classList.add('hidden');
+            resizeCanvas();
+            renderFrame(0);
+          }
+        };
+        frames.push(img);
       }
     }
 
-    generateDemoFrames();
-
-    function drawFrame(index) {
-      const idx = Math.min(frameCount - 1, Math.max(0, Math.floor(index)));
-      const frame = frames[idx];
-      if (!frame) return;
-
+    // Cover drawing math
+    function drawImageCover(img) {
+      if (!img || !img.complete) return;
       const cw = canvas.width;
       const ch = canvas.height;
-      const fw = frame.width;
-      const fh = frame.height;
+      const iw = img.width;
+      const ih = img.height;
 
-      const ratio = Math.max(cw / fw, ch / fh);
-      const shiftX = (cw - fw * ratio) / 2;
-      const shiftY = (ch - fh * ratio) / 2;
+      const hRatio = cw / iw;
+      const vRatio = ch / ih;
+      const ratio = Math.max(hRatio, vRatio);
 
-      ctx.drawImage(frame, 0, 0, fw, fh, shiftX, shiftY, fw * ratio, fh * ratio);
+      const shiftX = (cw - iw * ratio) / 2;
+      const shiftY = (ch - ih * ratio) / 2;
+
+      ctx.drawImage(img, 0, 0, iw, ih, shiftX, shiftY, iw * ratio, ih * ratio);
     }
 
-    function resize() {
+    function resizeCanvas() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = window.innerWidth * dpr;
       canvas.height = window.innerHeight * dpr;
-      drawFrame(currentFrame);
+      renderFrame(currentFrameFloat);
     }
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', resizeCanvas);
 
-    let targetProgress = 0, currentProgress = 0, currentFrame = 0;
+    let targetProgress = 0, currentProgress = 0, currentFrameFloat = 0;
     const damp = prefersReducedMotion ? 0.3 : 0.08;
 
     function getProgress() {
@@ -164,11 +226,18 @@
     }
     window.addEventListener('scroll', () => { targetProgress = getProgress(); }, { passive: true });
 
+    function renderFrame(frameFloat) {
+      const frameIndex = Math.min(frameCount - 1, Math.max(0, Math.floor(frameFloat)));
+      if (frames[frameIndex]) {
+        drawImageCover(frames[frameIndex]);
+      }
+    }
+
     function animate() {
       requestAnimationFrame(animate);
       currentProgress += (targetProgress - currentProgress) * damp;
-      currentFrame = currentProgress * (frameCount - 1);
-      drawFrame(currentFrame);
+      currentFrameFloat = currentProgress * (frameCount - 1);
+      renderFrame(currentFrameFloat);
     }
 
     const cards = document.querySelectorAll('.glass-card');
@@ -177,8 +246,13 @@
     }, { threshold: 0.2 });
     cards.forEach((c) => observer.observe(c));
 
-    resize();
+    generateDemoFrames();
     animate();
+
+    setTimeout(() => {
+      const pl = document.getElementById('preloader');
+      if (pl && !pl.classList.contains('hidden')) pl.classList.add('hidden');
+    }, 8000);
   </script>
 </body>
 </html>

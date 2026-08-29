@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Apex Pro One — Luxury Hardware Device with Apple-style studio lighting, brushed aluminum extrusion, dual sapphire optics, and seamless glassmorphic scrollytelling.">
+  <meta name="theme-color" content="#f8fafc">
   <title>Apex Hardware — Procedural 3D Product Showcase</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,9 +16,30 @@
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* ===== LOADING SCREEN ===== */
+    .loading-screen {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #f8fafc;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+    }
+    .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .spinner {
+      width: 46px; height: 46px;
+      border: 3px solid rgba(15, 23, 42, 0.1);
+      border-top-color: #4f46e5;
+      border-radius: 50%;
+      animation: spin 0.9s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== CANVAS VIEWPORT ===== */
     #webgl-canvas {
       position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
     }
+
+    /* ===== OVERLAY SCROLL ARCHITECTURE ===== */
     .scroll-container {
       position: relative; z-index: 10; pointer-events: none;
     }
@@ -28,12 +51,14 @@
     .scroll-section:first-child {
       justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 12vh;
     }
+
+    /* ===== GLASSMORPHIC CARDS ===== */
     .glass-card {
       max-width: 500px; padding: 2.5rem;
-      background: rgba(255, 255, 255, 0.72);
+      background: rgba(255, 255, 255, 0.78);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.9);
       border-radius: 24px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.05);
       pointer-events: auto;
@@ -58,7 +83,19 @@
   </style>
 </head>
 <body>
-  <canvas id="webgl-canvas"></canvas>
+
+  <noscript>
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#0f172a;font-family:system-ui;text-align:center;padding:2rem;">
+      <p>This experience requires JavaScript and WebGL. Please enable JavaScript in your browser.</p>
+    </div>
+  </noscript>
+
+  <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #64748b; letter-spacing: 0.08em;" id="loading-text">APEX HARDWARE STUDIO</p>
+  </div>
+
+  <canvas id="webgl-canvas" role="img" aria-label="Procedural 3D Luxury Hardware Device"></canvas>
 
   <main class="scroll-container">
     <section class="scroll-section">
@@ -100,24 +137,26 @@
     const canvas = document.getElementById('webgl-canvas');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 1.15;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xf8fafc, 0.02);
+    scene.fog = new THREE.FogExp2(0xf8fafc, 0.015);
     renderer.setClearColor(0xf8fafc);
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0, 7.5);
 
-    // Studio High-Key Lighting
+    // Studio Lighting Rig
     scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+
     const key = new THREE.DirectionalLight(0xffffff, 1.2);
     key.position.set(4, 9, 5);
     key.castShadow = true;
@@ -125,136 +164,134 @@
     key.shadow.bias = -0.0001;
     scene.add(key);
 
-    const fill = new THREE.DirectionalLight(0xe2e8f0, 0.5);
-    fill.position.set(-5, 4, -3);
+    const fill = new THREE.DirectionalLight(0xe2e8f0, 0.45);
+    fill.position.set(-5, 3, -3);
     scene.add(fill);
 
-    const bottomBounce = new THREE.DirectionalLight(0xffedd5, 0.3);
-    bottomBounce.position.set(0, -4, 3);
-    scene.add(bottomBounce);
+    const uplight = new THREE.DirectionalLight(0xfff7ed, 0.3);
+    uplight.position.set(0, -3, 2);
+    scene.add(uplight);
 
-    // Procedural Brushed Metal Map
-    function createBrushedMetalTexture(w = 512, h = 512) {
-      const cvs = document.createElement('canvas');
-      cvs.width = w; cvs.height = h;
-      const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#808080';
-      ctx.fillRect(0, 0, w, h);
-      for (let i = 0; i < 3000; i++) {
-        const y = Math.random() * h;
-        const x = Math.random() * w;
-        const len = 20 + Math.random() * 60;
-        const alpha = 0.03 + Math.random() * 0.06;
-        ctx.strokeStyle = Math.random() > 0.5 ? `rgba(255,255,255,${alpha})` : `rgba(0,0,0,${alpha})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + len, y);
-        ctx.stroke();
-      }
-      const tex = new THREE.CanvasTexture(cvs);
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    }
-
-    const brushedTexture = createBrushedMetalTexture();
-
-    // Studio Soft Shadow Catcher
+    // Shadow Catcher Plane
     const shadowPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(25, 25),
-      new THREE.ShadowMaterial({ opacity: 0.18 })
+      new THREE.PlaneGeometry(20, 20),
+      new THREE.ShadowMaterial({ opacity: 0.15 })
     );
     shadowPlane.rotation.x = -Math.PI / 2;
-    shadowPlane.position.y = -2.6;
+    shadowPlane.position.y = -1.6;
     shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
-    // Build Luxury Smart Device
-    function buildSmartDevice() {
+    // Build Luxury Device Chassis
+    function buildLuxuryDevice() {
       const device = new THREE.Group();
 
-      const bodyMat = new THREE.MeshStandardMaterial({
-        color: 0x1e293b,
-        roughness: 0.28,
-        roughnessMap: brushedTexture,
-        metalness: 0.9,
+      const aluminumMat = new THREE.MeshStandardMaterial({
+        color: 0x18181b,
+        metalness: 0.95,
+        roughness: 0.22,
       });
-      const screenMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.05, metalness: 0.1 });
-      const lensMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.08, metalness: 0.95 });
-      const uiGlowMat = new THREE.MeshStandardMaterial({ color: 0x6366f1, emissive: 0x818cf8, emissiveIntensity: 2.0 });
 
-      const w = 2.4, h = 4.8, radius = 0.4;
+      const screenMat = new THREE.MeshStandardMaterial({
+        color: 0x050505,
+        metalness: 0.9,
+        roughness: 0.04,
+      });
+
+      const lensMat = new THREE.MeshStandardMaterial({
+        color: 0x0284c7,
+        metalness: 0.95,
+        roughness: 0.05,
+        transparent: true,
+        opacity: 0.85,
+      });
+
+      const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xd4af37,
+        metalness: 0.95,
+        roughness: 0.2,
+      });
+
+      // Extruded Rounded Rect Unibody
       const shape = new THREE.Shape();
-      shape.moveTo(-w/2 + radius, -h/2);
-      shape.lineTo(w/2 - radius, -h/2);
-      shape.quadraticCurveTo(w/2, -h/2, w/2, -h/2 + radius);
-      shape.lineTo(w/2, h/2 - radius);
-      shape.quadraticCurveTo(w/2, h/2, w/2 - radius, h/2);
-      shape.lineTo(-w/2 + radius, h/2);
-      shape.quadraticCurveTo(-w/2, h/2, -w/2, h/2 - radius);
-      shape.lineTo(-w/2, -h/2 + radius);
-      shape.quadraticCurveTo(-w/2, -h/2, -w/2 + radius, -h/2);
+      const w = 2.0, h = 3.6, r = 0.35;
+      shape.moveTo(-w / 2 + r, -h / 2);
+      shape.lineTo(w / 2 - r, -h / 2);
+      shape.absarc(w / 2 - r, -h / 2 + r, r, -Math.PI / 2, 0, false);
+      shape.lineTo(w / 2, h / 2 - r);
+      shape.absarc(w / 2 - r, h / 2 - r, r, 0, Math.PI / 2, false);
+      shape.lineTo(-w / 2 + r, h / 2);
+      shape.absarc(-w / 2 + r, h / 2 - r, r, Math.PI / 2, Math.PI, false);
+      shape.lineTo(-w / 2, -h / 2 + r);
+      shape.absarc(-w / 2 + r, -h / 2 + r, r, Math.PI, Math.PI * 1.5, false);
 
-      const extrudeSettings = { depth: 0.28, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: 0.04, bevelThickness: 0.04 };
-      const bodyGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      const bodyGeo = new THREE.ExtrudeGeometry(shape, {
+        depth: 0.22,
+        bevelEnabled: true,
+        bevelSegments: 6,
+        steps: 1,
+        bevelSize: 0.04,
+        bevelThickness: 0.04,
+      });
       bodyGeo.center();
-      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      const body = new THREE.Mesh(bodyGeo, aluminumMat);
       body.castShadow = true;
       device.add(body);
 
-      const screenGeo = new THREE.PlaneGeometry(w - 0.16, h - 0.2);
+      // OLED Screen Inset
+      const screenGeo = new THREE.PlaneGeometry(1.88, 3.48);
       const screen = new THREE.Mesh(screenGeo, screenMat);
-      screen.position.z = 0.182;
+      screen.position.z = 0.151;
       device.add(screen);
 
-      const uiBar = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.35), uiGlowMat);
-      uiBar.position.set(0, 0.8, 0.184);
-      device.add(uiBar);
+      // Camera Island (Rear)
+      const island = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.08, 32), aluminumMat);
+      island.rotation.x = Math.PI / 2;
+      island.position.set(-0.45, 1.1, -0.15);
+      island.castShadow = true;
+      device.add(island);
 
-      const bump = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.1, 24), bodyMat);
-      bump.rotateX(Math.PI / 2);
-      bump.position.set(0.6, 1.6, -0.2);
-      device.add(bump);
-
-      [-0.15, 0.15].forEach((offset) => {
-        const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.12, 16), lensMat);
-        lens.rotateX(Math.PI / 2);
-        lens.position.set(0.6, 1.6 + offset, -0.22);
+      // Dual Lenses
+      [-0.15, 0.15].forEach((offsetY) => {
+        const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.03, 24), lensMat);
+        lens.rotation.x = Math.PI / 2;
+        lens.position.set(-0.45, 1.1 + offsetY, -0.19);
         device.add(lens);
+
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.015, 8, 24), goldMat);
+        ring.position.set(-0.45, 1.1 + offsetY, -0.19);
+        device.add(ring);
       });
 
       return device;
     }
 
-    const heroObject = buildSmartDevice();
-    scene.add(heroObject);
+    const device = buildLuxuryDevice();
+    scene.add(device);
 
-    // Scroll & Motion System
+    // Scroll & Mouse Tracking
     let targetProgress = 0, currentProgress = 0;
     let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
-    const damp = prefersReducedMotion ? 0.25 : 0.08;
+    const damp = prefersReducedMotion ? 0.25 : 0.07;
 
     function getProgress() {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       return max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
     }
-
     window.addEventListener('scroll', () => { targetProgress = getProgress(); }, { passive: true });
     window.addEventListener('pointermove', (e) => {
       mouseX = (e.clientX / window.innerWidth) * 2 - 1;
       mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
     }, { passive: true });
 
-    function lerp(a, b, t) { return a + (b - a) * t; }
     function smoothstep(t) { return t * t * (3 - 2 * t); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
 
     const timeline = [
-      { t: 0.0,  rotY: 0,              rotX: 0.1,            posY: 0,   fov: 45 },
-      { t: 0.35, rotY: Math.PI * 0.5,  rotX: -0.2,           posY: 0.2, fov: 42 },
-      { t: 0.70, rotY: Math.PI * 1.0,  rotX: 0.15,           posY: 0.4, fov: 40 },
-      { t: 1.0,  rotY: Math.PI * 2.0,  rotX: 0,              posY: 0,   fov: 38 },
+      { t: 0.0,  rotY: -0.2,            rotX: 0.1,  dist: 7.5, objY: 0 },
+      { t: 0.33, rotY: Math.PI * 0.8,   rotX: -0.2, dist: 6.2, objY: 0.2 },
+      { t: 0.66, rotY: Math.PI * 1.5,   rotX: 0.3,  dist: 5.4, objY: 0.4 },
+      { t: 1.0,  rotY: Math.PI * 2.05,  rotX: 0.0,  dist: 4.8, objY: 0.1 },
     ];
 
     function applyTimeline(p) {
@@ -263,11 +300,11 @@
       const a = timeline[i], b = timeline[i + 1];
       const localT = smoothstep((p - a.t) / (b.t - a.t || 1));
 
-      heroObject.rotation.y = lerp(a.rotY, b.rotY, localT);
-      heroObject.rotation.x = lerp(a.rotX, b.rotX, localT);
-      heroObject.position.y = lerp(a.posY, b.posY, localT);
-      camera.fov = lerp(a.fov, b.fov, localT);
-      camera.updateProjectionMatrix();
+      device.rotation.y = lerp(a.rotY, b.rotY, localT);
+      device.rotation.x = lerp(a.rotX, b.rotX, localT);
+      device.position.y = lerp(a.objY, b.objY, localT);
+
+      camera.position.z = lerp(a.dist, b.dist, localT);
     }
 
     const clock = new THREE.Clock();
@@ -281,14 +318,14 @@
 
       curMouseX += (mouseX - curMouseX) * 0.05;
       curMouseY += (mouseY - curMouseY) * 0.05;
-      camera.position.x = curMouseX * 0.5;
-      camera.position.y = curMouseY * 0.3;
+      camera.position.x = curMouseX * 0.4;
+      camera.position.y = curMouseY * 0.25;
 
       if (!prefersReducedMotion) {
-        heroObject.position.y += Math.sin(elapsed * 0.8) * 0.025;
+        device.position.y += Math.sin(elapsed * 0.8) * 0.015;
       }
 
-      camera.lookAt(0, heroObject.position.y, 0);
+      camera.lookAt(0, device.position.y, 0);
       renderer.render(scene, camera);
     }
 
@@ -310,6 +347,14 @@
     cards.forEach((c) => observer.observe(c));
 
     animate();
+    requestAnimationFrame(() => {
+      document.getElementById('loading-screen').classList.add('hidden');
+    });
+
+    setTimeout(() => {
+      const ls = document.getElementById('loading-screen');
+      if (ls && !ls.classList.contains('hidden')) ls.classList.add('hidden');
+    }, 8000);
   </script>
 </body>
 </html>

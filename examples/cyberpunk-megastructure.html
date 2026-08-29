@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sector 09 Monolith — Procedural Cyberpunk Megastructure with real-time in-memory window textures, cyan/magenta cross-lighting, and holographic particle fields in WebGL.">
+  <meta name="theme-color" content="#05070f">
   <title>Cyberpunk Megastructure — Procedural 3D Experience</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,9 +16,30 @@
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* ===== LOADING SCREEN ===== */
+    .loading-screen {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #05070f;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+    }
+    .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .spinner {
+      width: 46px; height: 46px;
+      border: 3px solid rgba(56, 189, 248, 0.15);
+      border-top-color: #00f0ff;
+      border-radius: 50%;
+      animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== CANVAS VIEWPORT ===== */
     #webgl-canvas {
       position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
     }
+
+    /* ===== OVERLAY SCROLL ARCHITECTURE ===== */
     .scroll-container {
       position: relative; z-index: 10; pointer-events: none;
     }
@@ -28,12 +51,14 @@
     .scroll-section:first-child {
       justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 12vh;
     }
+
+    /* ===== GLASSMORPHIC CARDS ===== */
     .glass-card {
       max-width: 520px; padding: 2.5rem;
-      background: rgba(5, 7, 15, 0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(56, 189, 248, 0.25);
+      background: rgba(5, 7, 15, 0.78);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(56, 189, 248, 0.28);
       border-radius: 20px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.1);
       pointer-events: auto;
@@ -59,14 +84,26 @@
   </style>
 </head>
 <body>
-  <canvas id="webgl-canvas"></canvas>
+
+  <noscript>
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#05070f;color:#f1f5f9;font-family:system-ui;text-align:center;padding:2rem;">
+      <p>This experience requires JavaScript and WebGL. Please enable JavaScript in your browser.</p>
+    </div>
+  </noscript>
+
+  <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #38bdf8; letter-spacing: 0.08em;" id="loading-text">SECTOR 09 MEGASTRUCTURE</p>
+  </div>
+
+  <canvas id="webgl-canvas" role="img" aria-label="Procedural Cyberpunk Megastructure Monolith Spire"></canvas>
 
   <main class="scroll-container">
     <section class="scroll-section">
       <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
         <span class="badge">Procedural Megastructure</span>
         <h1>Sector 09 Monolith</h1>
-        <p>A procedural cyberpunk high-rise spire rendered live in WebGL.</p>
+        <p>A procedural cyberpunk high-rise spire rendered live in WebGL with zero downloaded assets.</p>
       </div>
     </section>
 
@@ -80,17 +117,17 @@
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">Cybernetic Lighting</span>
-        <h2>Cyan & Magenta Cross-Light</h2>
-        <p>Cyan key moonlight combined with neon pink edge rimming creates deep contrast against dark titanium surfaces.</p>
+        <span class="badge">Cross Lighting</span>
+        <h2>Cyan & Magenta Rig</h2>
+        <p>High-contrast theatrical lighting rig simulating neon billboards and moonlight reflections on titanium alloys.</p>
       </div>
     </section>
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">Telecom Spire</span>
-        <h2>The Apex Transmitter</h2>
-        <p>High-intensity signal beacon pulsing over the neon metropolis below.</p>
+        <span class="badge">Ascension Trajectory</span>
+        <h2>Helical Camera Arc</h2>
+        <p>Camera corkscrews vertically up the monolith with interactive mouse parallax and physics damping.</p>
       </div>
     </section>
   </main>
@@ -101,11 +138,12 @@
     const canvas = document.getElementById('webgl-canvas');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 0.9;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -117,154 +155,166 @@
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 3, 10);
 
-    // Cyberpunk Lighting Rig
-    scene.add(new THREE.AmbientLight(0x0f172a, 0.4));
+    // Cross-Lighting Rig
+    scene.add(new THREE.AmbientLight(0x0f172a, 0.45));
     const key = new THREE.DirectionalLight(0x38bdf8, 1.3);
-    key.position.set(-5, 10, 5);
+    key.position.set(-5, 10, 6);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
     key.shadow.bias = -0.0001;
     scene.add(key);
 
-    const rim = new THREE.DirectionalLight(0xf43f5e, 0.8);
-    rim.position.set(5, 3, -6);
+    const rim = new THREE.DirectionalLight(0xf43f5e, 0.85);
+    rim.position.set(6, 4, -6);
     scene.add(rim);
 
-    // In-Memory Procedural Facade Texture
-    function createBuildingFacadeTexture(w = 512, h = 512) {
-      const cvs = document.createElement('canvas');
-      cvs.width = w; cvs.height = h;
-      const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#0a0f1d';
-      ctx.fillRect(0, 0, w, h);
-
-      const rows = 16, cols = 8;
-      const winW = w / cols - 6, winH = h / rows - 8;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const x = c * (winW + 6) + 3;
-          const y = r * (winH + 8) + 4;
-          const rand = Math.random();
-          if (rand > 0.6) {
-            ctx.fillStyle = rand > 0.85 ? '#38bdf8' : '#fef08a';
-          } else {
-            ctx.fillStyle = '#111827';
-          }
-          ctx.fillRect(x, y, winW, winH);
-        }
-      }
-      const tex = new THREE.CanvasTexture(cvs);
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    }
-
-    const facadeTexture = createBuildingFacadeTexture();
-    facadeTexture.repeat.set(1, 2);
-
-    // Shadow Catcher
+    // Shadow Catcher Plane
     const shadowPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(30, 30),
-      new THREE.ShadowMaterial({ opacity: 0.45 })
+      new THREE.ShadowMaterial({ opacity: 0.5 })
     );
     shadowPlane.rotation.x = -Math.PI / 2;
     shadowPlane.position.y = -0.01;
     shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
-    // Build Cyberpunk Tower
+    // Procedural Window Facade Texture Generator
+    function createBuildingFacadeTexture(width = 512, height = 512) {
+      const c = document.createElement('canvas');
+      c.width = width; c.height = height;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = '#0a0f1d';
+      ctx.fillRect(0, 0, width, height);
+
+      const rows = 32, cols = 16;
+      const padX = width / cols, padY = height / rows;
+      const winW = padX * 0.65, winH = padY * 0.55;
+
+      for (let r = 0; r < rows; r++) {
+        for (let col = 0; col < cols; col++) {
+          const rand = Math.random();
+          if (rand > 0.45) {
+            const glow = rand > 0.85 ? '#00f0ff' : (rand > 0.7 ? '#f43f5e' : '#ffd194');
+            ctx.fillStyle = glow;
+            ctx.shadowColor = glow;
+            ctx.shadowBlur = 6;
+            ctx.fillRect(col * padX + (padX - winW) / 2, r * padY + (padY - winH) / 2, winW, winH);
+          }
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(2, 4);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    // Build Cyberpunk Monolith Tower
     function buildCyberpunkTower() {
       const tower = new THREE.Group();
+      const facadeTex = createBuildingFacadeTexture();
 
-      const facadeMat = new THREE.MeshStandardMaterial({
-        map: facadeTexture,
-        roughness: 0.4,
-        metalness: 0.8,
+      const hullMat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        roughness: 0.35,
+        metalness: 0.85,
+        map: facadeTex,
       });
-      const metalMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.2, metalness: 0.9 });
-      const glowBandMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x38bdf8, emissiveIntensity: 2.2 });
-      const beaconMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xf43f5e, emissiveIntensity: 4.0 });
+      const trimMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.2, metalness: 0.9 });
+      const neonCyanMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00f0ff, emissiveIntensity: 2.8 });
+      const neonPinkMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xf43f5e, emissiveIntensity: 2.5 });
 
-      const tiers = [
-        { w: 3.2, h: 2.6, d: 3.2 },
-        { w: 2.3, h: 3.0, d: 2.3 },
-        { w: 1.5, h: 3.4, d: 1.5 },
-        { w: 0.8, h: 2.2, d: 0.8 }
-      ];
+      // 1. Base Monolith Core
+      const core = new THREE.Mesh(new THREE.BoxGeometry(2.4, 7.5, 2.4), hullMat);
+      core.position.y = 3.75;
+      core.castShadow = true;
+      tower.add(core);
 
-      let currentY = 0;
-      tiers.forEach((t, i) => {
-        const block = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.d), facadeMat);
-        block.position.y = currentY + t.h / 2;
-        block.castShadow = true;
-        tower.add(block);
+      // 2. Structural Corner Braces
+      const braceGeo = new THREE.BoxGeometry(0.18, 7.6, 0.18);
+      const offsets = [[-1.22, -1.22], [1.22, -1.22], [-1.22, 1.22], [1.22, 1.22]];
+      offsets.forEach(([ox, oz]) => {
+        const brace = new THREE.Mesh(braceGeo, trimMat);
+        brace.position.set(ox, 3.75, oz);
+        brace.castShadow = true;
+        tower.add(brace);
+      });
 
-        const band = new THREE.Mesh(new THREE.BoxGeometry(t.w * 1.02, 0.3, t.d * 1.02), glowBandMat);
-        band.position.y = currentY + t.h * 0.7;
+      // 3. Cantilever Observation Decks
+      const deckGeo = new THREE.BoxGeometry(3.4, 0.25, 3.4);
+      [2.5, 5.0, 7.0].forEach((deckY, idx) => {
+        const deck = new THREE.Mesh(deckGeo, trimMat);
+        deck.position.y = deckY;
+        deck.castShadow = true;
+        tower.add(deck);
+
+        // Neon Edge Band
+        const band = new THREE.Mesh(new THREE.BoxGeometry(3.45, 0.06, 3.45), idx % 2 === 0 ? neonCyanMat : neonPinkMat);
+        band.position.y = deckY;
         tower.add(band);
-
-        const ledge = new THREE.Mesh(new THREE.BoxGeometry(t.w * 1.08, 0.12, t.d * 1.08), metalMat);
-        ledge.position.y = currentY + t.h;
-        tower.add(ledge);
-
-        currentY += t.h;
       });
 
-      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.15, 2.5, 8), metalMat);
-      mast.position.y = currentY + 1.25;
-      tower.add(mast);
+      // 4. Rooftop Communications Spire & Antennas
+      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.08, 2.8, 8), trimMat);
+      antenna.position.y = 7.5 + 1.4;
+      antenna.castShadow = true;
+      tower.add(antenna);
 
-      const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), beaconMat);
-      beacon.position.y = currentY + 2.5;
+      const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), neonCyanMat);
+      beacon.position.y = 7.5 + 2.8;
       tower.add(beacon);
 
       return tower;
     }
 
-    const heroObject = buildCyberpunkTower();
-    scene.add(heroObject);
+    const tower = buildCyberpunkTower();
+    scene.add(tower);
 
-    // Digital Data Particles
-    const pCount = 150;
+    // Floating Data Particle Cloud
+    const pCount = window.innerWidth < 768 ? 80 : 160;
     const pPos = new Float32Array(pCount * 3);
     for (let i = 0; i < pCount; i++) {
-      pPos[i * 3]     = (Math.random() - 0.5) * 16;
-      pPos[i * 3 + 1] = Math.random() * 12;
-      pPos[i * 3 + 2] = (Math.random() - 0.5) * 16;
+      pPos[i * 3]     = (Math.random() - 0.5) * 14;
+      pPos[i * 3 + 1] = Math.random() * 10;
+      pPos[i * 3 + 2] = (Math.random() - 0.5) * 14;
     }
     const pGeo = new THREE.BufferGeometry();
     pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
     const pMat = new THREE.PointsMaterial({
-      color: 0x38bdf8, size: 0.045, transparent: true, opacity: 0.6, depthWrite: false
+      color: 0x38bdf8,
+      size: 0.04,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false,
     });
-    const particles = new THREE.Points(pGeo, pMat);
-    scene.add(particles);
+    const dataCloud = new THREE.Points(pGeo, pMat);
+    scene.add(dataCloud);
 
-    // Scroll & Mouse Parallax
+    // Scroll & Mouse Tracking
     let targetProgress = 0, currentProgress = 0;
     let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
-    const damp = prefersReducedMotion ? 0.25 : 0.08;
+    const damp = prefersReducedMotion ? 0.25 : 0.07;
 
     function getProgress() {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       return max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
     }
-
     window.addEventListener('scroll', () => { targetProgress = getProgress(); }, { passive: true });
     window.addEventListener('pointermove', (e) => {
       mouseX = (e.clientX / window.innerWidth) * 2 - 1;
       mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
     }, { passive: true });
 
-    function lerp(a, b, t) { return a + (b - a) * t; }
     function smoothstep(t) { return t * t * (3 - 2 * t); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
 
     const timeline = [
-      { t: 0.0,  rotY: 0,             posY: -1.0, camY: 2.5, fov: 52 },
-      { t: 0.35, rotY: Math.PI * 0.7, posY: 0.5,  camY: 4.5, fov: 48 },
-      { t: 0.70, rotY: Math.PI * 1.4, posY: 2.0,  camY: 7.0, fov: 44 },
-      { t: 1.0,  rotY: Math.PI * 2.0, posY: 3.5,  camY: 9.5, fov: 38 },
+      { t: 0.0,  camY: 2.2, camDist: 10.0, rotY: 0,              lookY: 2.5, fov: 50 },
+      { t: 0.33, camY: 4.5, camDist: 8.0,  rotY: Math.PI * 0.7,  lookY: 4.5, fov: 46 },
+      { t: 0.66, camY: 6.8, camDist: 6.8,  rotY: Math.PI * 1.45, lookY: 6.8, fov: 42 },
+      { t: 1.0,  camY: 9.2, camDist: 5.5,  rotY: Math.PI * 2.2,  lookY: 8.5, fov: 38 },
     ];
 
     function applyTimeline(p) {
@@ -273,10 +323,17 @@
       const a = timeline[i], b = timeline[i + 1];
       const localT = smoothstep((p - a.t) / (b.t - a.t || 1));
 
-      heroObject.rotation.y = lerp(a.rotY, b.rotY, localT);
-      heroObject.position.y = lerp(a.posY, b.posY, localT);
+      tower.rotation.y = lerp(a.rotY, b.rotY, localT);
+
+      const dist = lerp(a.camDist, b.camDist, localT);
+      const camY = lerp(a.camY, b.camY, localT);
+      const lookY = lerp(a.lookY, b.lookY, localT);
+
+      camera.position.set(0, camY, dist);
       camera.fov = lerp(a.fov, b.fov, localT);
       camera.updateProjectionMatrix();
+
+      camera.lookAt(0, lookY, 0);
     }
 
     const clock = new THREE.Clock();
@@ -290,15 +347,13 @@
 
       curMouseX += (mouseX - curMouseX) * 0.05;
       curMouseY += (mouseY - curMouseY) * 0.05;
-      camera.position.x = curMouseX * 0.8;
-      camera.position.y = 3.0 + curMouseY * 0.4;
+      camera.position.x += curMouseX * 0.5;
+      camera.position.y += curMouseY * 0.3;
 
       if (!prefersReducedMotion) {
-        heroObject.position.y += Math.sin(elapsed * 0.8) * 0.035;
+        tower.position.y = Math.sin(elapsed * 0.6) * 0.02;
+        dataCloud.rotation.y += 0.0004;
       }
-
-      particles.rotation.y += 0.0003;
-      camera.lookAt(0, heroObject.position.y + 3.0, 0);
 
       renderer.render(scene, camera);
     }
@@ -307,7 +362,7 @@
       const w = window.innerWidth, h = window.innerHeight;
       const aspect = w / h;
       camera.aspect = aspect;
-      camera.fov = aspect < 1.0 ? Math.min(80, 52 / aspect * 0.78) : 52;
+      camera.fov = aspect < 1.0 ? Math.min(80, 50 / aspect * 0.78) : 50;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, w < 768 ? 1.5 : 2.0));
@@ -321,6 +376,14 @@
     cards.forEach((c) => observer.observe(c));
 
     animate();
+    requestAnimationFrame(() => {
+      document.getElementById('loading-screen').classList.add('hidden');
+    });
+
+    setTimeout(() => {
+      const ls = document.getElementById('loading-screen');
+      if (ls && !ls.classList.contains('hidden')) ls.classList.add('hidden');
+    }, 8000);
   </script>
 </body>
 </html>

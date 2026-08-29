@@ -15,6 +15,16 @@ When building or testing a procedural 3D scroll website, issues can range from c
   * *Fix:* Standard materials require lighting. If no light is in the scene, materials render pitch black. Add at least one `AmbientLight` and one `DirectionalLight`.
 * **Diagnosis 4: WebGL Context Creation Failed.**
   * *Fix:* Check browser console for `WebGL context lost` or disabled hardware acceleration. Ensure the fallback overlay is displayed gracefully.
+* **Diagnosis 5: CDN failed to load or network blocked.**
+  * *Fix:* Wrap dynamic `import()` in `try/catch` and reveal a static fallback message:
+    ```js
+    try {
+      THREE = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js');
+    } catch (err) {
+      document.getElementById('loading-text').textContent = 'Unable to load 3D graphics engine.';
+      document.getElementById('loading-screen').classList.add('hidden');
+    }
+    ```
 
 ---
 
@@ -32,7 +42,7 @@ When building or testing a procedural 3D scroll website, issues can range from c
 * **Diagnosis: Canvas or overlay pointer-events conflict.**
   * *Fix:*
     - Canvas must have: `pointer-events: none;` OR sit at `z-index: 0` with content above it.
-    - Container `.scroll-content` must have `pointer-events: none;`.
+    - Container `.scroll-container` must have `pointer-events: none;`.
     - Interactive children (`.section-inner`, `button`, `a`, `.glass-card`) must have `pointer-events: auto;`.
 
 ---
@@ -63,13 +73,25 @@ When building or testing a procedural 3D scroll website, issues can range from c
       const baseFov = 50;
       if (aspect < 1.0) {
         // Mobile portrait: increase FOV or push camera back so width fits
-        camera.fov = baseFov / aspect * 0.75;
+        camera.fov = Math.min(85, baseFov / aspect * 0.78);
       } else {
         camera.fov = baseFov;
       }
       camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));
     }
     ```
+
+---
+
+### Issue: "Text on glass cards is difficult to read over 3D geometry"
+* **Diagnosis: Insufficient backdrop blur or low contrast ratio.**
+  * *Fix:*
+    1. Apply heavy backdrop blur: `backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);`
+    2. Add semi-opaque dark or light background tint: `background: rgba(15, 23, 42, 0.78);`
+    3. Ensure text color achieves WCAG AA 4.5:1 contrast against the card background.
+    4. Add subtle text-shadow for extra punch: `text-shadow: 0 2px 10px rgba(0,0,0,0.6);`
 
 ---
 
@@ -103,7 +125,24 @@ When building or testing a procedural 3D scroll website, issues can range from c
 
 ---
 
-## 3. Performance & Memory Leaks
+## 3. Accessibility & Reduced Motion
+
+### Issue: "User has motion sickness or prefers reduced motion"
+* **Diagnosis: Continuous rotation, camera shake, and floating breathing effects remain active.**
+  * *Fix:* Detect OS-level reduced motion preference and dampen or disable non-essential motion:
+    ```js
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const damp = prefersReducedMotion ? 0.25 : 0.08;
+
+    // Inside animate():
+    if (!prefersReducedMotion) {
+      heroGroup.position.y += Math.sin(elapsed * 0.8) * 0.02; // only float if motion allowed
+    }
+    ```
+
+---
+
+## 4. Performance & Memory Leaks
 
 ### Issue: "Frame rate drops or micro-stutters occur during scroll"
 * **Diagnosis 1: Allocating objects in `animate()` or render loop.**
@@ -112,7 +151,7 @@ When building or testing a procedural 3D scroll website, issues can range from c
     const _tempVec = new THREE.Vector3(); // reuse across frames
     ```
 * **Diagnosis 2: Uncapped devicePixelRatio on Retina/4K displays.**
-  * *Fix:* `renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));` (or `1.5` on mobile).
+  * *Fix:* `renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));`
 * **Diagnosis 3: Too many draw calls.**
   * *Fix:* Check `renderer.info.render.calls`. If > 100, replace individual repetitive meshes with `THREE.InstancedMesh` or merge static geometries with `BufferGeometryUtils.mergeGeometries()`.
 
@@ -121,3 +160,14 @@ When building or testing a procedural 3D scroll website, issues can range from c
 ### Issue: "Memory climbs continuously on React Hot Reload / Route Change"
 * **Diagnosis: Incomplete cleanup in `useEffect` return.**
   * *Fix:* Traverse the scene, dispose all geometries, materials, and textures, cancel `requestAnimationFrame`, and remove all window event listeners. See cleanup recipe in `polish-and-performance.md` and `scaffold-and-overlay.md`.
+
+---
+
+## 5. Three.js Version Compatibility Matrix
+
+| Three.js Feature | Current Syntax (r152+) | Deprecated / Broken Syntax |
+| :--- | :--- | :--- |
+| **Color Space** | `renderer.outputColorSpace = THREE.SRGBColorSpace;` | `renderer.outputEncoding = THREE.sRGBEncoding;` |
+| **Texture Encoding** | `texture.colorSpace = THREE.SRGBColorSpace;` | `texture.encoding = THREE.sRGBEncoding;` |
+| **Geometry** | `new THREE.BufferGeometry()` | `new THREE.Geometry()` (Removed) |
+| **Canvas Texture** | `new THREE.CanvasTexture(canvas)` | Requires explicit `.needsUpdate = true` on draw |
