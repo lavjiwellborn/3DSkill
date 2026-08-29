@@ -40,10 +40,11 @@ The quality bar is **art-directed composition**, not unachievable photorealism:
 ## 🎨 Turnkey Standalone Runnable Demos
 
 Explore the complete standalone HTML examples in [`examples/`](./examples/):
-* **[`examples/shrine-at-dusk.html`](./examples/shrine-at-dusk.html)**: 3-Tier Japanese Pagoda with Sōrin finial, dusk cross-lighting, and floating embers.
-* **[`examples/cyberpunk-megastructure.html`](./examples/cyberpunk-megastructure.html)**: Cyberpunk Monolith with in-memory procedural window facade textures and corkscrew camera orbit.
-* **[`examples/luxury-product-showcase.html`](./examples/luxury-product-showcase.html)**: Floating Luxury Device with Apple-style studio lighting and brushed aluminum unibody.
-* **[`examples/6dof-camera-flythrough.html`](./examples/6dof-camera-flythrough.html)**: Catmull-Rom spline camera flying through an architectural sci-fi tunnel with banking Dutch roll.
+* **[`examples/shrine-at-dusk.html`](./examples/shrine-at-dusk.html)**: 3-Tier Japanese Pagoda with Ethereal Dusk palette, in-memory wood grain & roof tile textures, PMREM reflections, and sunset embers.
+* **[`examples/cyberpunk-megastructure.html`](./examples/cyberpunk-megastructure.html)**: Nocturne Modern Tower with Nocturne Cityscape palette, in-memory window facade textures, and corkscrew camera orbit.
+* **[`examples/luxury-product-showcase.html`](./examples/luxury-product-showcase.html)**: Apex Pro One with Studio Minimal palette, in-memory brushed metal texture, PMREM reflections, and unibody chassis.
+* **[`examples/floating-island-nature.html`](./examples/floating-island-nature.html)**: Aethelgard Island with low-poly faceted rock strata, articulated bonsai trunk, and foliage clusters.
+* **[`examples/6dof-camera-flythrough.html`](./examples/6dof-camera-flythrough.html)**: Catmull-Rom spline camera flying through an architectural complex with lookahead tracking and banking Dutch roll.
 * **[`examples/drone-aerial-descent.html`](./examples/drone-aerial-descent.html)**: Autonomous drone aerial flight through a cyberpunk neon canyon into a hillside villa with full HUD telemetry.
 
 ---

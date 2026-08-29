@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Apex Pro One — Luxury Hardware Device with Apple-style studio lighting, brushed aluminum extrusion, dual sapphire optics, and seamless glassmorphic scrollytelling.">
-  <meta name="theme-color" content="#f8fafc">
-  <title>Apex Hardware — Procedural 3D Product Showcase</title>
+  <meta name="description" content="Studio Minimal Hardware — Procedural 3D tech hardware showcase rendered in real-time WebGL studio lighting with brushed metal in-memory textures and ACES tone mapping.">
+  <meta name="theme-color" content="#1c1c1e">
+  <title>Apex Hardware — Studio Minimal 3D Scroll</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: auto; }
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      color: #0f172a;
-      background: #f8fafc;
+      color: #f8fafc;
+      background: #1c1c1e;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
@@ -20,15 +20,15 @@
     /* ===== LOADING SCREEN ===== */
     .loading-screen {
       position: fixed; inset: 0; z-index: 1000;
-      background: #f8fafc;
+      background: #1c1c1e;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
     }
     .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
     .spinner {
-      width: 46px; height: 46px;
-      border: 3px solid rgba(15, 23, 42, 0.1);
-      border-top-color: #4f46e5;
+      width: 44px; height: 44px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #0071e3;
       border-radius: 50%;
       animation: spin 0.9s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
     }
@@ -39,7 +39,7 @@
       position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
     }
 
-    /* ===== OVERLAY SCROLL ARCHITECTURE ===== */
+    /* ===== OVERLAY SCROLL CONTAINER ===== */
     .scroll-container {
       position: relative; z-index: 10; pointer-events: none;
     }
@@ -55,12 +55,12 @@
     /* ===== GLASSMORPHIC CARDS ===== */
     .glass-card {
       max-width: 500px; padding: 2.5rem;
-      background: rgba(255, 255, 255, 0.78);
+      background: rgba(44, 44, 46, 0.82);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 24px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
       pointer-events: auto;
       opacity: 0;
       transform: translateY(30px);
@@ -68,12 +68,12 @@
     }
     .glass-card.is-visible { opacity: 1; transform: translateY(0); }
     .glass-card h1, .glass-card h2 {
-      font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem; color: #0f172a;
+      font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem; color: #ffffff;
     }
-    .glass-card p { font-size: clamp(1rem, 1.8vw, 1.15rem); line-height: 1.7; color: #64748b; }
+    .glass-card p { font-size: clamp(1rem, 1.8vw, 1.12rem); line-height: 1.7; color: #c9cacb; }
     .badge {
       display: inline-block; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.08em; color: #4f46e5; background: rgba(79, 70, 229, 0.08); border: 1px solid rgba(79, 70, 229, 0.2);
+      letter-spacing: 0.08em; color: #0071e3; background: rgba(0, 113, 227, 0.15); border: 1px solid rgba(0, 113, 227, 0.3);
       border-radius: 999px; margin-bottom: 1rem;
     }
     @media (max-width: 768px) {
@@ -85,14 +85,14 @@
 <body>
 
   <noscript>
-    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#0f172a;font-family:system-ui;text-align:center;padding:2rem;">
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#1c1c1e;color:#f8fafc;font-family:system-ui;text-align:center;padding:2rem;">
       <p>This experience requires JavaScript and WebGL. Please enable JavaScript in your browser.</p>
     </div>
   </noscript>
 
   <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
     <div class="spinner" aria-hidden="true"></div>
-    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #64748b; letter-spacing: 0.08em;" id="loading-text">APEX HARDWARE STUDIO</p>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #c9cacb; letter-spacing: 0.08em;" id="loading-text">APEX HARDWARE STUDIO</p>
   </div>
 
   <canvas id="webgl-canvas" role="img" aria-label="Procedural 3D Luxury Hardware Device"></canvas>
@@ -100,33 +100,33 @@
   <main class="scroll-container">
     <section class="scroll-section">
       <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
-        <span class="badge">Hardware Engineering</span>
+        <span class="badge">Studio Minimal</span>
         <h1>Apex Pro One</h1>
-        <p>Pure procedural luxury hardware rendered in real-time WebGL studio lighting.</p>
+        <p>Pure procedural luxury hardware rendered in real-time WebGL studio lighting with zero external assets.</p>
       </div>
     </section>
 
     <section class="scroll-section">
       <div class="glass-card">
         <span class="badge">Unibody Chassis</span>
-        <h2>Precision Extrusion</h2>
-        <p>Extruded aerospace-grade aluminum chassis with continuous rounded corner bevels and brushed anisotropic micro-textures.</p>
+        <h2>Brushed Extrusion</h2>
+        <p>Extruded aerospace-grade aluminum chassis with continuous rounded corner bevels and in-memory brushed micro-textures.</p>
       </div>
     </section>
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">Optical Array</span>
-        <h2>Dual Sapphire Optics</h2>
-        <p>Rear sensor pod featuring dual optical lenses with anti-reflective specular dielectric coatings.</p>
+        <span class="badge">Optical Pod</span>
+        <h2>Dual Sapphire Lenses</h2>
+        <p>Rear sensor pod featuring dual optical lenses with procedural environment reflections and dielectric coatings.</p>
       </div>
     </section>
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">OLED Matrix</span>
+        <span class="badge">OLED Glass</span>
         <h2>Infinite Contrast Bezel</h2>
-        <p>Seamless edge-to-edge glass display with zero-latency harmonic response.</p>
+        <p>Seamless edge-to-edge mirror glass display with real-time soft contact shadows.</p>
       </div>
     </section>
   </main>
@@ -137,7 +137,7 @@
     const canvas = document.getElementById('webgl-canvas');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Renderer
+    // 1. Renderer with ACES Tone Mapping
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -147,67 +147,105 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+    // 2. Dominant 60% Studio Tone (#1C1C1E)
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xf8fafc, 0.015);
-    renderer.setClearColor(0xf8fafc);
+    scene.fog = new THREE.FogExp2(0x1c1c1e, 0.015);
+    renderer.setClearColor(0x1c1c1e);
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0, 7.5);
 
-    // Studio Lighting Rig
-    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    // 3. Studio Lighting Rig
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-    const key = new THREE.DirectionalLight(0xffffff, 1.2);
-    key.position.set(4, 9, 5);
-    key.castShadow = true;
-    key.shadow.mapSize.set(2048, 2048);
-    key.shadow.bias = -0.0001;
-    scene.add(key);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(4, 9, 5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.bias = -0.0001;
+    scene.add(keyLight);
 
-    const fill = new THREE.DirectionalLight(0xe2e8f0, 0.45);
-    fill.position.set(-5, 3, -3);
-    scene.add(fill);
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.4);
+    fillLight.position.set(-5, 3, -3);
+    scene.add(fillLight);
 
-    const uplight = new THREE.DirectionalLight(0xfff7ed, 0.3);
-    uplight.position.set(0, -3, 2);
-    scene.add(uplight);
-
-    // Shadow Catcher Plane
+    // 4. Ground Shadow Catcher
     const shadowPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(20, 20),
-      new THREE.ShadowMaterial({ opacity: 0.15 })
+      new THREE.ShadowMaterial({ opacity: 0.35 })
     );
     shadowPlane.rotation.x = -Math.PI / 2;
     shadowPlane.position.y = -1.6;
     shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
-    // Build Luxury Device Chassis
+    // 5. In-Memory Brushed Metal Texture
+    function makeBrushedMetalTexture(baseColor = '#27272a', scratchColor = '#3f3f46') {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = baseColor;
+      ctx.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 500; i++) {
+        ctx.strokeStyle = scratchColor;
+        ctx.globalAlpha = 0.05 + Math.random() * 0.08;
+        ctx.lineWidth = 0.75 + Math.random() * 1.25;
+        const y = Math.random() * 512;
+        const len = 512 * (0.3 + Math.random() * 0.7);
+        const startX = Math.random() * 512;
+        ctx.beginPath();
+        ctx.moveTo(startX, y);
+        ctx.lineTo(startX + len, y);
+        ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(2, 4);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    // Procedural Environment Reflections
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x1c1c1e);
+    const envLight1 = new THREE.DirectionalLight(0xffffff, 2.5);
+    envLight1.position.set(5, 7, 5);
+    envScene.add(envLight1);
+    const envLight2 = new THREE.DirectionalLight(0x94a3b8, 1.5);
+    envLight2.position.set(-5, 3, -5);
+    envScene.add(envLight2);
+    scene.environment = pmremGenerator.fromScene(envScene, 0.04).texture;
+    pmremGenerator.dispose();
+
+    // 6. Build Unibody Hardware Device
     function buildLuxuryDevice() {
       const device = new THREE.Group();
 
       const aluminumMat = new THREE.MeshStandardMaterial({
-        color: 0x18181b,
-        metalness: 0.95,
-        roughness: 0.22,
+        color: 0x2c2c2e,
+        metalness: 0.90,
+        roughness: 0.35,
+        roughnessMap: makeBrushedMetalTexture('#ffffff', '#888888')
       });
 
       const screenMat = new THREE.MeshStandardMaterial({
         color: 0x050505,
-        metalness: 0.9,
-        roughness: 0.04,
+        metalness: 0.1,
+        roughness: 0.05,
       });
 
       const lensMat = new THREE.MeshStandardMaterial({
         color: 0x0284c7,
-        metalness: 0.95,
+        metalness: 0.9,
         roughness: 0.05,
         transparent: true,
         opacity: 0.85,
       });
 
-      const goldMat = new THREE.MeshStandardMaterial({
-        color: 0xd4af37,
+      const trimMat = new THREE.MeshStandardMaterial({
+        color: 0x3a3a3c,
         metalness: 0.95,
         roughness: 0.2,
       });
@@ -244,7 +282,7 @@
       screen.position.z = 0.151;
       device.add(screen);
 
-      // Camera Island (Rear)
+      // Rear Camera Island
       const island = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.08, 32), aluminumMat);
       island.rotation.x = Math.PI / 2;
       island.position.set(-0.45, 1.1, -0.15);
@@ -258,7 +296,7 @@
         lens.position.set(-0.45, 1.1 + offsetY, -0.19);
         device.add(lens);
 
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.015, 8, 24), goldMat);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.015, 8, 24), trimMat);
         ring.position.set(-0.45, 1.1 + offsetY, -0.19);
         device.add(ring);
       });
@@ -269,7 +307,7 @@
     const device = buildLuxuryDevice();
     scene.add(device);
 
-    // Scroll & Mouse Tracking
+    // 7. Damped Scroll & Mouse Tracking
     let targetProgress = 0, currentProgress = 0;
     let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
     const damp = prefersReducedMotion ? 0.25 : 0.07;
@@ -284,7 +322,10 @@
       mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
     }, { passive: true });
 
-    function smoothstep(t) { return t * t * (3 - 2 * t); }
+    function smootherstep(t) {
+      t = Math.max(0, Math.min(1, t));
+      return t * t * t * (t * (t * 6 - 15) + 10);
+    }
     function lerp(a, b, t) { return a + (b - a) * t; }
 
     const timeline = [
@@ -298,7 +339,7 @@
       let i = 0;
       while (i < timeline.length - 2 && p > timeline[i + 1].t) i++;
       const a = timeline[i], b = timeline[i + 1];
-      const localT = smoothstep((p - a.t) / (b.t - a.t || 1));
+      const localT = smootherstep((p - a.t) / (b.t - a.t || 1));
 
       device.rotation.y = lerp(a.rotY, b.rotY, localT);
       device.rotation.x = lerp(a.rotX, b.rotX, localT);

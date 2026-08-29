@@ -3,43 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="6-DOF Spline Camera Fly-Through — Procedural 3D architectural tunnel tour with Catmull-Rom spline flight path, banking Dutch roll physics, and lookahead orientation in WebGL.">
-  <meta name="theme-color" content="#020617">
-  <title>6-DOF Spline Fly-Through — Procedural 3D</title>
+  <meta name="description" content="Catmull-Rom Spline Flight — Procedural 3D camera fly-through through an architectural complex along a mathematical 3D spline in WebGL.">
+  <meta name="theme-color" content="#10171a">
+  <title>Spline Flight — Procedural 3D Scrollytelling</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: auto; }
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       color: #f8fafc;
-      background: #020617;
+      background: linear-gradient(180deg, #10171a 0%, #1b2a2e 100%);
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ===== LOADING SCREEN ===== */
     .loading-screen {
       position: fixed; inset: 0; z-index: 1000;
-      background: #020617;
+      background: #10171a;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
     }
     .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
     .spinner {
-      width: 46px; height: 46px;
-      border: 3px solid rgba(56, 189, 248, 0.15);
-      border-top-color: #38bdf8;
+      width: 44px; height: 44px;
+      border: 3px solid rgba(242, 169, 78, 0.15);
+      border-top-color: #f2a94e;
       border-radius: 50%;
-      animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+      animation: spin 0.85s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ===== CANVAS VIEWPORT ===== */
     #webgl-canvas {
       position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
     }
 
-    /* ===== OVERLAY SCROLL ARCHITECTURE ===== */
     .scroll-container { position: relative; z-index: 10; pointer-events: none; }
     .scroll-section {
       min-height: 100vh; display: flex; align-items: center; padding: 6rem 8%;
@@ -50,13 +47,12 @@
       justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 12vh;
     }
 
-    /* ===== GLASSMORPHIC CARDS ===== */
     .glass-card {
       max-width: 520px; padding: 2.5rem;
-      background: rgba(15, 23, 42, 0.78);
+      background: rgba(16, 23, 26, 0.82);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(56, 189, 248, 0.28);
+      border: 1px solid rgba(242, 169, 78, 0.25);
       border-radius: 24px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
       pointer-events: auto;
@@ -66,12 +62,12 @@
     .glass-card.is-visible { opacity: 1; transform: translateY(0); }
     .glass-card h1, .glass-card h2 {
       font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.15; margin-bottom: 1rem; color: #ffffff;
-      text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
     }
     .glass-card p { font-size: 1.1rem; line-height: 1.7; color: #94a3b8; }
     .badge {
       display: inline-block; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.08em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4);
+      letter-spacing: 0.08em; color: #f2a94e; background: rgba(242, 169, 78, 0.15); border: 1px solid rgba(242, 169, 78, 0.3);
       border-radius: 999px; margin-bottom: 1rem;
     }
     @media (max-width: 768px) {
@@ -83,24 +79,24 @@
 <body>
 
   <noscript>
-    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#020617;color:#f8fafc;font-family:system-ui;text-align:center;padding:2rem;">
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#10171a;color:#f8fafc;font-family:system-ui;text-align:center;padding:2rem;">
       <p>This experience requires JavaScript and WebGL. Please enable JavaScript in your browser.</p>
     </div>
   </noscript>
 
   <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
     <div class="spinner" aria-hidden="true"></div>
-    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #38bdf8; letter-spacing: 0.08em;" id="loading-text">CALIBRATING 6-DOF FLIGHT</p>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #f2a94e; letter-spacing: 0.08em;" id="loading-text">CALIBRATING SPLINE FLIGHT</p>
   </div>
 
-  <canvas id="webgl-canvas" role="img" aria-label="Interactive 6-DOF Procedural 3D Camera Flight Tour"></canvas>
+  <canvas id="webgl-canvas" role="img" aria-label="Interactive Procedural 3D Camera Flight Tour"></canvas>
 
   <main class="scroll-container">
     <section class="scroll-section">
       <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
-        <span class="badge">6-DOF Scrollytelling</span>
+        <span class="badge">Mathematical Spline</span>
         <h1>Catmull-Rom Flight</h1>
-        <p>Scroll down to pilot the camera along a 3D spline trajectory through an architectural complex.</p>
+        <p>Scroll down to pilot the camera along a 3D Catmull-Rom spline trajectory through an architectural complex.</p>
       </div>
     </section>
 
@@ -114,16 +110,16 @@
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">Dutch Roll Physics</span>
-        <h2>Banking Curves</h2>
+        <span class="badge">Banking Curves</span>
+        <h2>Dutch Roll Rotation</h2>
         <p>Camera rotation along the Z-axis dynamically banks into high-speed turns.</p>
       </div>
     </section>
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">Core Approach</span>
-        <h2>Terminal Landing</h2>
+        <span class="badge">Nocturne Palette</span>
+        <h2>Core Approach</h2>
         <p>Precision deceleration into the quantum reactor core.</p>
       </div>
     </section>
@@ -135,41 +131,40 @@
     const canvas = document.getElementById('webgl-canvas');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Renderer
+    // 1. Renderer with ACES Tone Mapping
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.95;
+    renderer.toneMappingExposure = 1.05;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+    // 2. Nocturne Atmosphere
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020617, 0.04);
-    renderer.setClearColor(0x020617);
+    scene.fog = new THREE.FogExp2(0x10171a, 0.038);
+    renderer.setClearColor(0x10171a);
 
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
 
-    // Lighting Rig
-    scene.add(new THREE.AmbientLight(0x0f172a, 0.5));
-    const key = new THREE.DirectionalLight(0x38bdf8, 1.4);
-    key.position.set(6, 12, 6);
-    key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    scene.add(key);
+    // 3. Lighting Rig
+    scene.add(new THREE.AmbientLight(0x0d1a1e, 0.45));
+    const keyLight = new THREE.DirectionalLight(0xd4e8f0, 1.3);
+    keyLight.position.set(6, 12, 6);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    scene.add(keyLight);
 
-    const rim = new THREE.DirectionalLight(0xf43f5e, 0.7);
-    rim.position.set(-6, 4, -6);
-    scene.add(rim);
+    const fillLight = new THREE.DirectionalLight(0x1b2a2e, 0.5);
+    fillLight.position.set(-6, 4, -6);
+    scene.add(fillLight);
 
-    // Architectural Sci-Fi Corridor / Complex
+    // 4. Architectural Complex
     const complex = new THREE.Group();
-    const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.8 });
-    const cyanGlow = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00f0ff, emissiveIntensity: 2.5 });
-    const pinkGlow = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xf43f5e, emissiveIntensity: 2.2 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x2c2c2e, roughness: 0.4, metalness: 0.8 });
+    const amberGlow = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xf2a94e, emissiveIntensity: 2.2 });
 
-    // Waypoint Gate Arches
     for (let z = -15; z <= 15; z += 5) {
       const arch = new THREE.Group();
       const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 0.4), darkMat);
@@ -184,7 +179,7 @@
       top.position.set(0, 6, 0);
       arch.add(top);
 
-      const neon = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.08, 0.42), z % 10 === 0 ? cyanGlow : pinkGlow);
+      const neon = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.08, 0.42), amberGlow);
       neon.position.set(0, 5.8, 0);
       arch.add(neon);
 
@@ -192,15 +187,14 @@
       complex.add(arch);
     }
 
-    // Core Quantum Singularity
     const coreGeo = new THREE.IcosahedronGeometry(1.2, 1);
-    const coreMesh = new THREE.Mesh(coreGeo, cyanGlow);
+    const coreMesh = new THREE.Mesh(coreGeo, amberGlow);
     coreMesh.position.set(0, 2, -18);
     complex.add(coreMesh);
 
     scene.add(complex);
 
-    // Catmull-Rom 3D Spline Path
+    // 5. Catmull-Rom Spline Path
     const spline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 2.5, 18),
       new THREE.Vector3(4.5, 4.0, 8),
@@ -209,7 +203,7 @@
       new THREE.Vector3(0, 2.0, -15),
     ], false, 'catmullrom', 0.5);
 
-    // Scroll & Mouse Tracking
+    // 6. Damped Scroll & Pointer Tracking
     let targetProgress = 0, currentProgress = 0;
     let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
     const damp = prefersReducedMotion ? 0.25 : 0.07;
@@ -224,7 +218,10 @@
       mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
     }, { passive: true });
 
-    function smoothstep(t) { return t * t * (3 - 2 * t); }
+    function smootherstep(t) {
+      t = Math.max(0, Math.min(1, t));
+      return t * t * t * (t * (t * 6 - 15) + 10);
+    }
 
     const clock = new THREE.Clock();
 
@@ -233,7 +230,7 @@
       const elapsed = clock.getElapsedTime();
 
       currentProgress += (targetProgress - currentProgress) * damp;
-      const t = smoothstep(currentProgress);
+      const t = smootherstep(currentProgress);
 
       const pt = spline.getPointAt(t);
       const lookaheadT = Math.min(1, t + 0.04);
@@ -243,18 +240,17 @@
 
       curMouseX += (mouseX - curMouseX) * 0.05;
       curMouseY += (mouseY - curMouseY) * 0.05;
-      camera.position.x += curMouseX * 0.4;
-      camera.position.y += curMouseY * 0.25;
+      camera.position.x += curMouseX * 0.3;
+      camera.position.y += curMouseY * 0.2;
 
       camera.lookAt(lookPt.x, lookPt.y, lookPt.z);
 
-      // Dutch Roll banking into curves
       const tangent = spline.getTangentAt(t);
       camera.rotation.z = -tangent.x * 0.25;
 
       if (!prefersReducedMotion) {
-        coreMesh.rotation.y = elapsed * 0.8;
-        coreMesh.rotation.x = elapsed * 0.4;
+        coreMesh.rotation.y = elapsed * 0.6;
+        coreMesh.rotation.x = elapsed * 0.3;
       }
 
       renderer.render(scene, camera);

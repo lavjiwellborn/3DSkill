@@ -3,46 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Nocturne Spire — Procedural 3D Modern Architectural Monolith rendered in WebGL with Nocturne Cityscape 60/30/10 palette discipline and in-memory window facade textures.">
-  <meta name="theme-color" content="#10171a">
-  <title>Nocturne Spire — Procedural 3D Experience</title>
+  <meta name="description" content="Aethelgard Island — Procedural 3D Low-Poly Floating Island and Bonsai rendered live in WebGL with ACES tone mapping and smooth scroll choreography.">
+  <meta name="theme-color" content="#131b18">
+  <title>Aethelgard Island — Procedural 3D Scroll</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: auto; }
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      color: #f1f5f9;
-      background: linear-gradient(180deg, #10171a 0%, #1b2a2e 100%);
+      color: #ede6d6;
+      background: linear-gradient(180deg, #131b18 0%, #1f2d27 100%);
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ===== LOADING SCREEN ===== */
     .loading-screen {
       position: fixed; inset: 0; z-index: 1000;
-      background: #10171a;
+      background: #131b18;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
     }
     .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
     .spinner {
       width: 44px; height: 44px;
-      border: 3px solid rgba(242, 169, 78, 0.15);
-      border-top-color: #f2a94e;
+      border: 3px solid rgba(74, 107, 72, 0.2);
+      border-top-color: #86efac;
       border-radius: 50%;
-      animation: spin 0.85s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+      animation: spin 0.9s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ===== CANVAS VIEWPORT ===== */
     #webgl-canvas {
       position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; pointer-events: none;
     }
 
-    /* ===== OVERLAY SCROLL CONTAINER ===== */
-    .scroll-container {
-      position: relative; z-index: 10; pointer-events: none;
-    }
+    .scroll-container { position: relative; z-index: 10; pointer-events: none; }
     .scroll-section {
       min-height: 100vh; display: flex; align-items: center; padding: 6rem 8%;
     }
@@ -52,15 +47,14 @@
       justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 12vh;
     }
 
-    /* ===== GLASSMORPHIC CARDS (WCAG AA Compliant) ===== */
     .glass-card {
       max-width: 520px; padding: 2.5rem;
-      background: rgba(16, 23, 26, 0.82);
+      background: rgba(19, 27, 24, 0.82);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(242, 169, 78, 0.25);
+      border: 1px solid rgba(134, 239, 172, 0.22);
       border-radius: 20px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 25px rgba(242, 169, 78, 0.05);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
       pointer-events: auto;
       opacity: 0;
       transform: translateY(30px);
@@ -68,13 +62,13 @@
     }
     .glass-card.is-visible { opacity: 1; transform: translateY(0); }
     .glass-card h1, .glass-card h2 {
-      font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.15; margin-bottom: 1rem; color: #ffffff;
+      font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.15; margin-bottom: 1rem; color: #86efac;
       text-shadow: 0 2px 10px rgba(0,0,0,0.8);
     }
-    .glass-card p { font-size: clamp(1rem, 1.8vw, 1.12rem); line-height: 1.7; color: #cbd5e1; }
+    .glass-card p { font-size: clamp(1rem, 1.8vw, 1.12rem); line-height: 1.7; color: #ede6d6; }
     .badge {
       display: inline-block; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.08em; color: #f2a94e; background: rgba(242, 169, 78, 0.12); border: 1px solid rgba(242, 169, 78, 0.3);
+      letter-spacing: 0.08em; color: #86efac; background: rgba(134, 239, 172, 0.12); border: 1px solid rgba(134, 239, 172, 0.3);
       border-radius: 999px; margin-bottom: 1rem;
     }
     @media (max-width: 768px) {
@@ -86,48 +80,48 @@
 <body>
 
   <noscript>
-    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#10171a;color:#f1f5f9;font-family:system-ui;text-align:center;padding:2rem;">
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#131b18;color:#ede6d6;font-family:system-ui;text-align:center;padding:2rem;">
       <p>This experience requires JavaScript and WebGL. Please enable JavaScript in your browser.</p>
     </div>
   </noscript>
 
   <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
     <div class="spinner" aria-hidden="true"></div>
-    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #f2a94e; letter-spacing: 0.08em;" id="loading-text">NOCTURNE SPIRE</p>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #86efac; letter-spacing: 0.08em;" id="loading-text">AETHELGARD ISLAND</p>
   </div>
 
-  <canvas id="webgl-canvas" role="img" aria-label="Procedural 3D Modern Architectural Monolith"></canvas>
+  <canvas id="webgl-canvas" role="img" aria-label="Procedural 3D Low-Poly Floating Island and Bonsai Tree"></canvas>
 
   <main class="scroll-container">
     <section class="scroll-section">
       <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
-        <span class="badge">Nocturne Cityscape</span>
-        <h1>Nocturne Spire</h1>
-        <p>A procedural modern architectural tower rendered in real-time WebGL with disciplined 60/30/10 composition.</p>
+        <span class="badge">Procedural Landscape</span>
+        <h1>Aethelgard Island</h1>
+        <p>A procedural low-poly floating island and ancient bonsai rendered live in WebGL.</p>
       </div>
     </section>
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">In-Memory Textures</span>
-        <h2>Procedural Window Grid</h2>
-        <p>Thousands of warm amber office windows generated dynamically on an offscreen 2D canvas with zero downloaded image files.</p>
+        <span class="badge">Faceted Primitives</span>
+        <h2>Stratified Rock Strata</h2>
+        <p>Inverted faceted cone foundation with earth and moss coloration and real-time contact shadows.</p>
       </div>
     </section>
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">Architecture</span>
-        <h2>Stepped Setbacks</h2>
-        <p>Proportionate massing setbacks with cantilevered floor collars and rooftop communications mast.</p>
+        <span class="badge">Organic Geometry</span>
+        <h2>Articulated Bonsai</h2>
+        <p>Multi-segment wooden trunk with tilted joint angles and low-poly icosahedron foliage crowns.</p>
       </div>
     </section>
 
     <section class="scroll-section">
       <div class="glass-card">
-        <span class="badge">Motion Quality</span>
-        <h2>Smootherstep Flight</h2>
-        <p>Ascending corkscrew camera trajectory with non-linear quintic easing and subtle idle micro-motion.</p>
+        <span class="badge">Dynamic Motion</span>
+        <h2>Orbital Float Arc</h2>
+        <p>Smooth quintic camera orbit with interactive cursor parallax and subtle harmonic idle breathing.</p>
       </div>
     </section>
   </main>
@@ -138,7 +132,7 @@
     const canvas = document.getElementById('webgl-canvas');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // 1. Renderer with ACES Filmic Tone Mapping
+    // 1. Renderer with ACES Tone Mapping
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2.0));
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -148,125 +142,115 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // 2. Dominant 60% Atmosphere (#10171A)
+    // 2. Forest Depth Fog (60%: #131B18)
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x10171a, 0.035);
-    renderer.setClearColor(0x10171a);
+    scene.fog = new THREE.FogExp2(0x131b18, 0.038);
+    renderer.setClearColor(0x131b18);
 
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 3, 10);
+    camera.position.set(0, 2, 8.5);
 
-    // 3. Moonlight Key + Fill Lighting Rig
-    scene.add(new THREE.AmbientLight(0x0d1a1e, 0.45));
+    // 3. Sunlight + Sky Lighting Rig
+    scene.add(new THREE.AmbientLight(0x1a2620, 0.5));
 
-    const keyLight = new THREE.DirectionalLight(0xd4e8f0, 1.3); // Cool moonlight
-    keyLight.position.set(-4, 10, 5);
+    const keyLight = new THREE.DirectionalLight(0xfff0dd, 1.4); // Warm morning sun
+    keyLight.position.set(5, 8, 4);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.set(1024, 1024);
     keyLight.shadow.bias = -0.0001;
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0x1b2a2e, 0.4);
-    fillLight.position.set(5, 3, -5);
-    scene.add(fillLight);
+    const rimLight = new THREE.DirectionalLight(0x86efac, 0.45); // Moss emerald kicker
+    rimLight.position.set(-4, 3, -6);
+    scene.add(rimLight);
 
     // 4. Ground Shadow Catcher
     const shadowPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(30, 30),
-      new THREE.ShadowMaterial({ opacity: 0.5 })
+      new THREE.PlaneGeometry(25, 25),
+      new THREE.ShadowMaterial({ opacity: 0.4 })
     );
     shadowPlane.rotation.x = -Math.PI / 2;
-    shadowPlane.position.y = -0.01;
+    shadowPlane.position.y = -2.1;
     shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
-    // 5. In-Memory Procedural Window Facade Texture
-    function makeWindowFacadeTexture(width = 512, height = 512) {
-      const c = document.createElement('canvas');
-      c.width = width; c.height = height;
-      const ctx = c.getContext('2d');
+    // 5. Build Low-Poly Floating Island
+    function buildFloatingIsland() {
+      const island = new THREE.Group();
 
-      ctx.fillStyle = '#10171a';
-      ctx.fillRect(0, 0, width, height);
+      const rockMat  = new THREE.MeshStandardMaterial({ color: 0x6b6259, roughness: 0.95, flatShading: true });
+      const grassMat = new THREE.MeshStandardMaterial({ color: 0x4a6b48, roughness: 0.85, flatShading: true });
+      const woodMat  = new THREE.MeshStandardMaterial({ color: 0x5c2c22, roughness: 0.9, flatShading: true });
+      const leafMat  = new THREE.MeshStandardMaterial({ color: 0x2d5a36, roughness: 0.75, flatShading: true });
 
-      const rows = 32, cols = 16;
-      const padX = width / cols, padY = height / rows;
-      const winW = padX * 0.65, winH = padY * 0.55;
+      // Inverted faceted cone rock base
+      const rockGeo = new THREE.ConeGeometry(3.2, 4.0, 7);
+      rockGeo.rotateX(Math.PI);
+      const rock = new THREE.Mesh(rockGeo, rockMat);
+      rock.position.y = -2.0;
+      rock.castShadow = true;
+      island.add(rock);
 
-      for (let r = 0; r < rows; r++) {
-        for (let col = 0; col < cols; col++) {
-          const rand = Math.random();
-          if (rand > 0.45) {
-            // Singular 10% Accent Tier: Warm amber (#F2A94E)
-            const glow = rand > 0.85 ? '#fcd34d' : '#f2a94e';
-            ctx.fillStyle = glow;
-            ctx.shadowColor = glow;
-            ctx.shadowBlur = 4;
-            ctx.fillRect(col * padX + (padX - winW) / 2, r * padY + (padY - winH) / 2, winW, winH);
-          }
-        }
-      }
-      const tex = new THREE.CanvasTexture(c);
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(2, 4);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    }
+      // Top grass cap plinth
+      const grassGeo = new THREE.CylinderGeometry(3.3, 3.2, 0.35, 7);
+      const grass = new THREE.Mesh(grassGeo, grassMat);
+      grass.position.y = 0.05;
+      grass.receiveShadow = true;
+      island.add(grass);
 
-    // 6. Build Modern Tower Monolith
-    function buildModernTower() {
-      const tower = new THREE.Group();
-      const facadeTex = makeWindowFacadeTexture();
+      // Articulated Bonsai Trunk
+      const trunkLower = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.4, 6), woodMat);
+      trunkLower.position.set(0.2, 0.75, 0);
+      trunkLower.rotation.z = -0.22;
+      trunkLower.castShadow = true;
+      island.add(trunkLower);
 
-      const concreteMat = new THREE.MeshStandardMaterial({
-        color: 0x6b6259,
-        roughness: 0.85,
-        map: facadeTex,
-      });
-      const trimMat = new THREE.MeshStandardMaterial({ color: 0x2c2c2e, roughness: 0.35, metalness: 0.8 });
-      const beaconMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xf2a94e, emissiveIntensity: 3.0 });
+      const trunkUpper = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 1.2, 6), woodMat);
+      trunkUpper.position.set(0.55, 1.8, 0);
+      trunkUpper.rotation.z = 0.32;
+      trunkUpper.castShadow = true;
+      island.add(trunkUpper);
 
-      const tiers = [
-        { w: 3.2, h: 2.8, d: 2.8 },
-        { w: 2.4, h: 3.2, d: 2.2 },
-        { w: 1.6, h: 3.6, d: 1.6 },
-        { w: 1.0, h: 1.8, d: 1.0 }
+      // Foliage Clusters
+      const clusters = [
+        { pos: [0.75, 2.4, 0.0],  scale: 0.95 },
+        { pos: [0.10, 1.9, 0.35], scale: 0.70 },
+        { pos: [1.15, 1.7, -0.3], scale: 0.65 },
       ];
-
-      let currentY = 0;
-      tiers.forEach((t) => {
-        const core = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.d), concreteMat);
-        core.position.y = currentY + t.h / 2;
-        core.castShadow = true;
-        tower.add(core);
-
-        // Cantilevered floor slab
-        const slab = new THREE.Mesh(new THREE.BoxGeometry(t.w * 1.12, 0.12, t.d * 1.12), trimMat);
-        slab.position.y = currentY + t.h;
-        slab.castShadow = true;
-        tower.add(slab);
-
-        currentY += t.h;
+      clusters.forEach(({ pos, scale }) => {
+        const foliage = new THREE.Mesh(new THREE.IcosahedronGeometry(scale, 1), leafMat);
+        foliage.position.set(...pos);
+        foliage.castShadow = true;
+        island.add(foliage);
       });
 
-      // Rooftop Penthouse & Mast
-      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.08, 2.4, 8), trimMat);
-      mast.position.y = currentY + 1.2;
-      mast.castShadow = true;
-      tower.add(mast);
-
-      const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), beaconMat);
-      beacon.position.y = currentY + 2.4;
-      tower.add(beacon);
-
-      return tower;
+      return island;
     }
 
-    const tower = buildModernTower();
-    scene.add(tower);
+    const island = buildFloatingIsland();
+    scene.add(island);
 
-    // 7. Damped Scroll & Mouse Tracking
+    // Floating Spores (Accent: #86EFAC)
+    const pCount = window.innerWidth < 768 ? 40 : 80;
+    const pPos = new Float32Array(pCount * 3);
+    for (let i = 0; i < pCount; i++) {
+      pPos[i * 3]     = (Math.random() - 0.5) * 12;
+      pPos[i * 3 + 1] = Math.random() * 8;
+      pPos[i * 3 + 2] = (Math.random() - 0.5) * 12;
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: 0x86efac,
+      size: 0.04,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+    });
+    const spores = new THREE.Points(pGeo, pMat);
+    scene.add(spores);
+
+    // 6. Scroll & Mouse Tracking
     let targetProgress = 0, currentProgress = 0;
     let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
     const damp = prefersReducedMotion ? 0.25 : 0.07;
@@ -288,10 +272,10 @@
     function lerp(a, b, t) { return a + (b - a) * t; }
 
     const timeline = [
-      { t: 0.0,  camY: 2.2, camDist: 10.0, rotY: 0,              lookY: 2.5, fov: 50 },
-      { t: 0.33, camY: 4.5, camDist: 8.0,  rotY: Math.PI * 0.7,  lookY: 4.5, fov: 46 },
-      { t: 0.66, camY: 6.8, camDist: 6.8,  rotY: Math.PI * 1.45, lookY: 6.8, fov: 42 },
-      { t: 1.0,  camY: 9.2, camDist: 5.5,  rotY: Math.PI * 2.2,  lookY: 8.5, fov: 38 },
+      { t: 0.0,  camY: 1.0, camDist: 8.5, rotY: 0,             objY: 0 },
+      { t: 0.33, camY: 2.2, camDist: 7.2, rotY: Math.PI * 0.7, objY: 0.2 },
+      { t: 0.66, camY: 3.4, camDist: 6.2, rotY: Math.PI * 1.4, objY: 0.4 },
+      { t: 1.0,  camY: 4.8, camDist: 5.5, rotY: Math.PI * 2.1, objY: 0.1 },
     ];
 
     function applyTimeline(p) {
@@ -300,16 +284,12 @@
       const a = timeline[i], b = timeline[i + 1];
       const localT = smootherstep((p - a.t) / (b.t - a.t || 1));
 
-      tower.rotation.y = lerp(a.rotY, b.rotY, localT);
+      island.rotation.y = lerp(a.rotY, b.rotY, localT);
+      island.position.y = lerp(a.objY, b.objY, localT);
 
       const dist = lerp(a.camDist, b.camDist, localT);
       const camY = lerp(a.camY, b.camY, localT);
-      const lookY = lerp(a.lookY, b.lookY, localT);
-
       camera.position.set(0, camY, dist);
-      camera.fov = lerp(a.fov, b.fov, localT);
-      camera.updateProjectionMatrix();
-      camera.lookAt(0, lookY, 0);
     }
 
     const clock = new THREE.Clock();
@@ -323,13 +303,14 @@
 
       curMouseX += (mouseX - curMouseX) * 0.05;
       curMouseY += (mouseY - curMouseY) * 0.05;
-      camera.position.x = curMouseX * 0.5;
-      camera.position.y += curMouseY * 0.3;
+      camera.position.x = curMouseX * 0.4;
+      camera.position.y += curMouseY * 0.25;
 
       if (!prefersReducedMotion) {
-        tower.position.y = Math.sin(elapsed * 0.6) * 0.015;
+        island.position.y += Math.sin(elapsed * 0.8) * 0.015;
       }
 
+      camera.lookAt(0, island.position.y + 0.5, 0);
       renderer.render(scene, camera);
     }
 
