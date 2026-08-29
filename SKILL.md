@@ -1,167 +1,125 @@
 ---
 name: procedural-3d-scroll-sites
-description: How to build cinematic, "ultra 3D animated" websites with two powerful rendering engines: Mode A (Pure Procedural 3D generated live from code via Three.js/WebGL without video assets) and Mode B (High-Performance Image-Sequence Frame Scrubber that preloads frames into RAM and scrubs smoothly on scroll with zero stutter). Also supports Hybrid Mode C (compositing live 3D objects over image-sequence backgrounds). Features full 6-DOF (Degrees of Freedom) camera choreography (Dolly, Truck, Pedestal, Pan, Tilt, Roll, Spline Flight), ACES tone mapping, cross-lighting, contact shadows, procedural in-memory canvas textures, and interactive cursor parallax. ALWAYS use this skill for 3D scroll experiences, scrollytelling websites, procedural WebGL, image frame scrubbing, or Apple-style interactive product reveals.
+description: How to build cinematic, scroll-driven 3D websites where the entire 3D scene (buildings, temples, product objects, environments) is generated from code and rendered live, pixel-by-pixel, by the GPU — with the object's rotation/position/camera tied directly to scroll — instead of generating a video (Kling, Seedance, Runway, Sora, etc.), extracting it into frames, and playing the frames back as a sprite/frame-sequence animation. ALWAYS use this skill when the user asks for a "3D animated" or "3D animative" website, a scroll-driven 3D scene, an object that rotates/rises/moves as the page scrolls, a "cinematic", "immersive", or "premium feel" landing page with a 3D hero, or explicitly says they want real/procedural/code-generated 3D instead of converting AI video into frames — even if they never say "Three.js" or "WebGL" by name. Also trigger this any time the user describes the frame-extraction-from-video workflow and wants an alternative to it.
 ---
 
-# Procedural 3D & Frame-Sequence Scroll Sites
+# Procedural 3D Scroll Sites
 
-## ⚡ START HERE — Decision Router (Mandatory First Step)
+## 1. What This Skill Is and Why It Exists
 
-**Before reading any other file**, open the Decision Router to map the user's prompt to the exact files you need, in the exact order:
+This skill teaches an AI to build cinematic, scroll-driven 3D websites where the entire 3D scene (a building, a temple, a product, an environment) is generated and rendered **live from code** via Three.js/WebGL, with scroll position driving real transforms on real geometry.
 
-📄 **[`references/decision-router.md`](file:///e:/SKILL/references/decision-router.md)** — Routes any prompt to the correct mode (A/B/C), geometry blueprint, lighting palette, camera trajectory, and build sequence.
+It specifically exists to replace a common workaround: generating a clip from an AI video model (Kling, Seedance, Runway, Sora, etc.), slicing it into frames, and playing those frames back as a scroll-triggered image sequence. That frame-playback approach is fixed-resolution, fixed-camera-path, has visible compression artifacts, and cannot be reshaped or lit dynamically.
 
-If this is your first time using this skill, also read the Golden Path walkthrough for a complete end-to-end example:
-
-📄 **[`references/golden-path-walkthrough.md`](file:///e:/SKILL/references/golden-path-walkthrough.md)** — Step-by-step tutorial building one complete site from prompt to finished output.
+This skill's premise is: **no video, no frames, anywhere in the pipeline** — just geometry, lighting, materials, and math, recomputed live by the GPU every frame.
 
 ---
 
-## Dual-Engine Architecture
+## 2. The Quality Bar: Art-Directed, Not Photorealistic
 
-This skill equips AI coding assistants to build award-winning, 60+ FPS scroll-driven interactive websites across **two distinct rendering modes and a hybrid composition mode**:
+Pure procedural primitive geometry rendered live in a browser — with zero downloaded 3D model files and zero external raster textures — **cannot achieve literal photorealism**. Photorealism requires high-poly scanned assets and offline path-tracing, both incompatible with live web performance.
+
+Do not write code or set expectations promising "ultra-photorealistic" results. The honest, achievable target is:
+- **Considered composition**: 60/30/10 color palette discipline
+- **Physical lighting response**: Warm key vs. cool rim cross-lighting + ground shadow catcher
+- **ACES filmic tone mapping**: Controlled highlight roll-off and dark value depth
+- **Deliberate silhouette recognition**: Instant squint-test readability from primitive combinations
+- **Organic motion**: Damped smoothstep/smootherstep easing + subtle idle breathing
+
+A scene that looks *art-directed and designed by a human team*, rather than an uncalibrated default demo.
+
+---
+
+## 3. Core Architecture: The Fixed-Canvas Pattern
+
+The foundational layout for all procedural 3D scroll websites:
 
 ```
-                                  ┌──────────────────────────────────────────────────────────┐
-                                  │           SCROLL & MOTION CHOREOGRAPHY ENGINE            │
-                                  │  • Physics Damping (lerp)   • Non-Linear Easing Math     │
-                                  │  • 6-DOF Spline Trajectory  • Interactive Cursor Parallax│
-                                  └─────────────────────────────┬────────────────────────────┘
-                                                                │
-                                ┌───────────────────────────────┴───────────────────────────────┐
-                                │                                                               │
-                                ▼                                                               ▼
-        ┌──────────────────────────────────────────────┐              ┌──────────────────────────────────────────────┐
-        │       MODE A: PURE PROCEDURAL 3D (WebGL)      │              │       MODE B: IMAGE-SEQUENCE FRAME SCRUBBER  │
-        │ • 100% code-generated mathematical geometry  │              │ • Preloads image frame array into RAM buffer │
-        │ • Real-time dynamic lights & contact shadows │              │ • Zero-stutter HTML5 2D Canvas scrubbing     │
-        │ • Zero video assets, zero image downloads    │              │ • Sub-frame lerp + Aspect-ratio cover fit    │
-        │ • In-memory procedural canvas textures       │              │ • Perfect when user supplies image frames    │
-        └──────────────────────────────────────────────┘              └──────────────────────────────────────────────┘
-                                │                                                               │
-                                └───────────────────────────────┬───────────────────────────────┘
-                                                                │
-                                                                ▼
-                                ┌──────────────────────────────────────────────────────────────┐
-                                │             HYBRID MODE C: 3D + IMAGE COMPOSITION            │
-                                │ • Layer 1 (Back): Image sequence canvas scrubber             │
-                                │ • Layer 2 (Front): Transparent Three.js WebGL canvas         │
-                                │ • Synchronized 6-DOF transforms matching background footage  │
-                                └──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ Viewport (Fixed Screen Space)                            │
+│                                                          │
+│  [ Canvas: position: fixed; inset: 0; z-index: 0 ]       │
+│  • Three.js WebGLRenderer rendering live GPU scene       │
+│  • pointer-events: none; (allows scroll & interaction)   │
+│                                                          │
+│  [ DOM Overlay: position: relative; z-index: 10 ]        │
+│  • .scroll-container with tall scroll height (min 400vh) │
+│  • .scroll-section blocks (min-height: 100vh)            │
+│  • .glass-card text panels (pointer-events: auto;)       │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
 ```
 
----
-
-## 1. When to Use Which Mode
-
-* **Use Mode A (Pure Procedural 3D)**: When the user asks for a 3D animated website, procedural geometry, Japanese shrine/pagoda, sci-fi vessel, cyberpunk tower, low-poly landscape, tech device, or wants lightweight, zero-download code-generated 3D.
-* **Use Mode B (Image-Sequence Frame Scrubber)**: When the user provides reference image frames (e.g. `frame_0001.jpg` to `frame_0150.jpg` or an array of image URLs) and wants an Apple-style, frame-accurate scrub on scroll.
-* **Use Hybrid Mode C**: When the user wants real-time 3D interactive particles, text labels, or geometric overlays sitting on top of pre-rendered background frames.
+Scroll events update a normalized `targetProgress` `[0, 1]`, which is smoothly damped via `requestAnimationFrame` and mapped through non-linear easing curves to camera/object transforms.
 
 ---
 
-## 2. Master Reference Documentation
+## 4. Master Reference Guides
 
-Read these dedicated reference guides to implement every subsystem with precision:
+Read these dedicated reference files to implement each subsystem:
 
-| Reference Guide | Core Topic |
+| Reference Guide | Core Topic & Contents |
 | :--- | :--- |
-| **[`references/decision-router.md`](file:///e:/SKILL/references/decision-router.md)** | **⚡ START HERE**: Prompt → Mode → Files → Build Order routing logic. |
-| **[`references/golden-path-walkthrough.md`](file:///e:/SKILL/references/golden-path-walkthrough.md)** | **End-to-End Tutorial**: Complete build from prompt to 12-point self-check gate. |
-| **[`references/scaffold-and-overlay.md`](file:///e:/SKILL/references/scaffold-and-overlay.md)** | **Production Scaffolds**: Copy-paste HTML5 & React scaffolds with damping, ACES tone mapping, shadow catcher, mobile FOV, accessibility, CDN error handling, and glass cards. |
-| **[`references/6dof-scrollytelling-director.md`](file:///e:/SKILL/references/6dof-scrollytelling-director.md)** | **6-DOF Motion Director**: Formulas for Dolly, Truck, Pedestal, Pan, Tilt, Roll, Spiral Ascent, Spline Fly-Throughs, Vertigo Dolly-Zoom, and LookAt tracking. |
-| **[`references/image-sequence-scrubber.md`](file:///e:/SKILL/references/image-sequence-scrubber.md)** | **Mode B & C Engine**: In-memory preloader, aspect-ratio cover math, DPR scaling, sub-pixel damping, and hybrid 3D composition. |
-| **[`references/procedural-geometry.md`](file:///e:/SKILL/references/procedural-geometry.md)** | **5 Geometric Blueprints**: Pagoda, Sci-Fi Vessel, Cyberpunk Spire, Smart Device, and Floating Island with Lathe math. |
-| **[`references/advanced-procedural-blueprints.md`](file:///e:/SKILL/references/advanced-procedural-blueprints.md)** | **6 Additional Blueprints**: DNA Double Helix, Concept Supercar, Holo Data Globe, Classical Parthenon, Quantum Reactor, and Mountain Valley. |
-| **[`references/lighting-and-color-palettes.md`](file:///e:/SKILL/references/lighting-and-color-palettes.md)** | **Curated Color Palettes**: Tested hex codes for *Ethereal Dusk*, *Cyberpunk Obsidian*, *Apple Minimalist Studio*, *Bioluminescent Deep Sea*, and *Solar Flare Amber*. |
-| **[`references/procedural-materials-and-textures.md`](file:///e:/SKILL/references/procedural-materials-and-textures.md)** | **Zero-Asset Textures**: In-memory 2D Canvas generation for brushed metal, Japanese wood grain, cyber grids, window facades, procedural normal maps, and GLSL shaders. |
-| **[`references/scroll-choreography.md`](file:///e:/SKILL/references/scroll-choreography.md)** | **Motion Design**: Dual-layer damping, non-linear easing curves (`smoothstep`, `smootherstep`, cubic curves), interactive cursor parallax, and idle breathing. |
-| **[`references/polish-and-performance.md`](file:///e:/SKILL/references/polish-and-performance.md)** | **Visual Polish & Perf**: ACES tone mapping, 4-point cross-lighting, shadow catcher, mobile portrait FOV math, zero-allocation loop, and GPU cleanup. |
-| **[`references/scene-templates.md`](file:///e:/SKILL/references/scene-templates.md)** | **3 Art-Directed Mood Presets**: *"Shrine at Dusk"*, *"Floating Product"*, and *"Night Cityscape"*. |
-| **[`references/troubleshooting-and-faq.md`](file:///e:/SKILL/references/troubleshooting-and-faq.md)** | **Diagnostic Matrix**: Instant solutions for black canvas, unclickable buttons, shadow acne, mobile portrait cutoff, CDN failures, and performance drops. |
+| **[`references/color-and-lighting.md`](file:///e:/SKILL/references/color-and-lighting.md)** | **Color & Lighting Discipline**: The 60/30/10 rule, anti-cliché ban list, 3 named starter palettes (*Ethereal Dusk*, *Studio Minimal*, *Nocturne Cityscape*), ACES tone mapping setup with r128 vs r152+ version caveat, and warm/cool cross-lighting. |
+| **[`references/procedural-geometry.md`](file:///e:/SKILL/references/procedural-geometry.md)** | **Geometric Blueprints**: The Lathe trick for curved profiles, plan-shape coherence rule (square roof on square body), 4 worked blueprints (Japanese Pagoda, Modern Minimalist Tower, Low-Poly Floating Island, Sacred Torii Gate). |
+| **[`references/procedural-materials.md`](file:///e:/SKILL/references/procedural-materials.md)** | **Zero-Asset Surface Materials**: In-memory HTML5 Canvas 2D texture generators (wood grain, brushed metal, window facade grid, roof tiles), PMREMGenerator procedural environment reflections, and physical roughness/metalness table. |
+| **[`references/scroll-choreography.md`](file:///e:/SKILL/references/scroll-choreography.md)** | **Motion & Easing Mechanics**: Normalized scroll progress driver, first-order IIR damping loop, smoothstep & smootherstep formulas, keyframe timeline interpolation, non-accumulative mouse parallax, and idle breathing micro-motion. |
+| **[`references/polish-and-performance.md`](file:///e:/SKILL/references/polish-and-performance.md)** | **Production Polish & Performance**: 3-point cross-lighting rig, invisible contact shadow catcher plane, mobile portrait FOV compensation, zero-allocation loop rules (no `new` in `animate()`), and GPU memory disposal matrix. |
+| **[`references/scaffold-and-overlay.md`](file:///e:/SKILL/references/scaffold-and-overlay.md)** | **Complete Scaffolds**: Copy-paste standalone HTML5 and React/Next.js scaffolds with ACES tone mapping, shadow catcher, glassmorphic card CSS, `<noscript>` fallback, and loading safety timeout. |
+| **[`references/troubleshooting-and-faq.md`](file:///e:/SKILL/references/troubleshooting-and-faq.md)** | **Diagnostic Matrix**: Fast fixes for blank canvas, camera inside geometry, missing scroll height, unclickable text cards, washed-out colors, mobile portrait clipping, and shadow acne. |
 
 ---
 
-## 3. Turnkey Standalone Runnable Examples
+## 5. 10-Phase Production Build Order
 
-| Runnable Example | What It Demonstrates |
-| :--- | :--- |
-| **[`examples/shrine-at-dusk.html`](file:///e:/SKILL/examples/shrine-at-dusk.html)** | Japanese Pagoda with twilight cross-lighting, sunset embers, and glass cards. |
-| **[`examples/cyberpunk-megastructure.html`](file:///e:/SKILL/examples/cyberpunk-megastructure.html)** | Cyberpunk Spire with in-memory window facade textures and cyan/magenta lighting. |
-| **[`examples/luxury-product-showcase.html`](file:///e:/SKILL/examples/luxury-product-showcase.html)** | Luxury Hardware Device with Apple-style studio lighting and brushed metal extrusion. |
-| **[`examples/image-sequence-scrubber.html`](file:///e:/SKILL/examples/image-sequence-scrubber.html)** | **Mode B Demo**: In-memory frame preloader and sub-frame scroll scrubber. |
-| **[`examples/6dof-camera-flythrough.html`](file:///e:/SKILL/examples/6dof-camera-flythrough.html)** | **6-DOF Demo**: Catmull-Rom spline camera flying through an architectural sci-fi tunnel with banking Dutch roll. |
-| **[`examples/drone-aerial-descent.html`](file:///e:/SKILL/examples/drone-aerial-descent.html)** | **Advanced Multi-Scene Demo**: Autonomous drone aerial flight through a cyberpunk neon canyon into a hillside villa with full HUD telemetry. |
+When building a procedural 3D scroll experience, execute these phases in sequence:
 
----
-
-## 4. 10-Phase Production Build Order
-
-1. **Scaffold & Color Science**: Initialize renderer with ACES tone mapping, sRGB color space, and shadow mapping immediately:
-   ```js
-   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-   renderer.toneMappingExposure = 1.0;
-   renderer.outputColorSpace = THREE.SRGBColorSpace;
-   renderer.shadowMap.enabled = true;
-   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-   ```
-2. **Lighting & Grounding**: Build the 3-point cross-lighting rig (warm key + cool rim + hemisphere bounce) and add the `ShadowMaterial` ground plane catcher.
-3. **Geometry Construction**: Build the hero object inside a single parent `THREE.Group` using blueprints from `procedural-geometry.md` or `advanced-procedural-blueprints.md`.
-4. **Procedural Surface Detailing**: Apply procedural canvas textures (brushed metal, wood grain, or grid emissive) from `procedural-materials-and-textures.md`.
-5. **Atmospheric Environment**: Add `scene.fog = new THREE.FogExp2(color, density)` and atmospheric particle points for depth.
-6. **Scroll & Damping Engine**: Wire the scroll progress calculator and apply `smoothstep` non-linear easing across the keyframe timeline.
-7. **6-DOF Trajectory & Cursor Parallax**: Layer 6-DOF camera moves from `6dof-scrollytelling-director.md` and interactive cursor tilt.
-8. **HTML/CSS Overlay Integration**: Lay out sections with `min-height: 100vh` and `.glass-card` text panels with `backdrop-filter: blur(16px)`.
-9. **Responsive & Mobile Adaptation**: Implement the portrait aspect ratio FOV compensation formula so wide models are never cut off on smartphones.
-10. **Self-Check Gate Verification**: Run through the mandatory 12-point audit below before considering the work finished.
+1. **Scaffold & Canvas Setup**: Create full-bleed fixed canvas, attach passive scroll & pointer listeners, configure resize handler.
+2. **Color Science & Tone Mapping**: Set `renderer.toneMapping = THREE.ACESFilmicToneMapping`, `renderer.toneMappingExposure`, and `renderer.outputColorSpace = THREE.SRGBColorSpace` (or `outputEncoding = THREE.sRGBEncoding` for r128).
+3. **Lighting Rig & Grounding**: Add warm directional key light with shadow map, cool rim light, ambient fill, and invisible `ShadowMaterial` plane beneath base.
+4. **Dominant Environment**: Set `renderer.setClearColor()` and `scene.fog = new THREE.FogExp2(color, density)` matching the 60% dominant palette hue.
+5. **Geometry Construction**: Build the subject inside a single root `THREE.Group`, strictly obeying plan-shape matching (square roofs on square bodies).
+6. **In-Memory Texturing & Reflections**: Generate procedural `CanvasTexture` maps for surfaces and set up `PMREMGenerator` reflections for metallic parts.
+7. **Damped Scroll Engine**: Wire `targetProgress` calculation, damping lerp in `animate()`, and map `smootherstep(currentProgress)` across the keyframe timeline.
+8. **Cursor Parallax & Idle Breathing**: Layer subtle mouse position offsets and `prefers-reduced-motion`-gated sinusoidal idle breathing.
+9. **HTML Overlay & Contrast**: Lay out `.scroll-section` blocks with glassmorphic cards using `backdrop-filter: blur(18px)` and WCAG AA compliant text.
+10. **Self-Check Gate Verification**: Run the 9-point audit gate below.
 
 ---
 
-## 5. Mandatory 12-Point Self-Check Gate
+## 6. Mandatory 9-Point Self-Check Gate
 
-> **EVERY item must pass before output is considered finished.** If any item fails, fix it and re-check.
+> **Every item is a checkable YES/NO against the rendered result. All 9 must pass before output is considered finished.**
 
-1. **Squint Silhouette Test**: Does the object read instantly as the intended subject without reading any text?
-2. **Plan-Shape Coherence**: Do roofs/caps match the footprint shape beneath them (square on square, round on round)?
-3. **Deep Overhang Ratio**: Do eaves and bevels extend significantly beyond the body beneath them (overhang factor 1.5–1.8)?
-4. **Color & Material Contrast**: Is there high contrast between structural trim and core panels?
-5. **Tone Mapping Calibration**: Is `ACESFilmicToneMapping` + `SRGBColorSpace` active?
-6. **Scene Grounding & Shadow**: Is the object grounded with real-time soft contact shadows on a shadow catcher plane?
-7. **Non-Linear Motion Easing**: Does scroll motion accelerate and decelerate smoothly via `smoothstep` or cubic easing?
-8. **Continuous Scroll Coverage**: Is there meaningful visual transformation across the entire 0→1 scroll range with zero dead zones?
-9. **Idle Micro-Motion ("Breathing")**: Does the object/camera maintain subtle harmonic float when scrolling stops?
-10. **Mobile Portrait Framing**: When viewport width is narrower than height, does the camera FOV adjust automatically to prevent geometry clipping?
-11. **Reduced Motion Respect**: Is `window.matchMedia('(prefers-reduced-motion: reduce)')` checked? If true, idle breathing, particle drift, and continuous rotation are disabled or reduced to near-zero amplitude.
-12. **Text Contrast & Readability**: Do all glass card text panels maintain WCAG AA contrast (4.5:1 for body text) against the 3D background? Is `backdrop-filter: blur()` applied so text is never unreadable over bright geometry?
+1. **Squint Silhouette Test**: Does the object read instantly as the intended subject at a glance without reading any text?
+2. **Plan-Shape Coherence**: Do roofs, caps, and tiers match the footprint shape beneath them (square on square, round on round — no circular Lathe roofs on square boxes)?
+3. **Deep Overhang Ratio**: Do eaves, ledges, or bevels extend significantly beyond the body beneath them (overhang factor 1.4–1.8×)?
+4. **Color & Material Contrast**: Does the scene obey the 60/30/10 rule (60% background/fog, 30% structure, 10% singular accent) with high value contrast between trim and core panels?
+5. **Continuous Scroll Coverage**: Is there meaningful visual transformation (rotation, elevation, detail reveal) across the entire 0→1 scroll range without static dead zones?
+6. **Tone-Mapping Calibration**: Is `ACESFilmicToneMapping` and correct color space (`SRGBColorSpace` / `sRGBEncoding`) actively configured on the renderer?
+7. **Text/UI Contrast**: Do text panels over the 3D scene maintain WCAG AA (4.5:1) contrast against their busiest background moment via background tint and backdrop blur?
+8. **Mobile Portrait Framing**: Does the camera FOV adjust for narrow aspect ratios (`aspect < 1.0`) so the subject is never clipped on mobile screens?
+9. **Idle Motion Present**: Does the scene maintain subtle harmonic breathing when scrolling pauses, while strictly disabling or dampening when `prefers-reduced-motion: reduce` is detected?
 
 ---
 
-## 6. Common Pitfalls (Quick Reference)
+## 7. Common Failure Modes & Quick Fixes
 
-| Mistake | Why It Happens | Fix |
+| Symptom | Root Cause | Fix |
 | :--- | :--- | :--- |
-| **Black canvas** | No lights added with `MeshStandardMaterial` | Always add at least `AmbientLight` + `DirectionalLight` |
-| **Camera inside geometry** | Camera at `(0,0,0)` and object at `(0,0,0)` | Move camera to `(0, 2, 8)` minimum |
-| **No scroll movement** | Page body has no scrollable height | Ensure `.scroll-section` blocks have `min-height: 100vh` |
-| **Overlay text unclickable** | Canvas z-index above overlay | Canvas: `pointer-events: none; z-index: 0;` |
-| **Round roof on square body** | Using `LatheGeometry` on `BoxGeometry` body | Use `ConeGeometry(r, h, 4)` rotated 45° for square bodies |
-| **Colors washed out** | Missing tone mapping | Add `renderer.toneMapping = THREE.ACESFilmicToneMapping` |
-| **Mobile clipping** | Fixed FOV on narrow viewports | Apply `camera.fov = baseFov / aspect * 0.78` when `aspect < 1.0` |
-| **Micro-stutters** | Allocating objects inside `animate()` | Pre-allocate all vectors/colors outside the render loop |
-| **CDN fails silently** | No error handling on `import()` | Wrap CDN import in `try/catch` with static fallback message |
+| **Black canvas** | `MeshStandardMaterial` used with no lights | Add `AmbientLight` + `DirectionalLight` |
+| **Camera inside geometry** | Camera at `(0,0,0)` matching object position | Position camera at `(0, 2, 8)` and call `camera.lookAt(0, 0, 0)` |
+| **No scroll animation** | Body has no scroll height (`maxScroll = 0`) | Ensure `.scroll-section` elements have `min-height: 100vh` |
+| **Buttons unclickable** | Canvas z-index above DOM or missing pointer-events | Set canvas `pointer-events: none; z-index: 0;` and cards `pointer-events: auto;` |
+| **Disc on a box** | Circular `LatheGeometry` roof on square body | Use `ConeGeometry(radius, height, 4)` rotated 45° for square bodies |
+| **Washed out highlights** | Missing ACES tone mapping | Set `renderer.toneMapping = THREE.ACESFilmicToneMapping` |
+| **Mobile cutoff** | Fixed vertical FOV on narrow screens | Apply `camera.fov = baseFov / aspect * 0.78` when `aspect < 1.0` |
+| **Micro-stutters** | Allocating `new THREE.Vector3()` in `animate()` | Pre-allocate reusable scratchpad vectors outside the render loop |
+| **Drifting camera** | Mouse parallax using `+=` instead of `=` | Assign `camera.position.x = mouseCurrentX * offset` directly |
 
 ---
 
-## 7. Three.js Version Management
+## 8. Three.js Version Notes
 
-The skill pins Three.js at **r170** (`0.170.0`). All CDN URLs in scaffolds and examples use this version.
-
-**To update the version:**
-1. Change the CDN URL in `scaffold-and-overlay.md` (search for `three@0.170.0`)
-2. Update all examples in `examples/` directory
-3. Test that `ACESFilmicToneMapping`, `SRGBColorSpace`, `PCFSoftShadowMap`, and `ShadowMaterial` still exist in the new version's API
-
-**Three.js breaking change history (relevant):**
-- `r152+`: `outputEncoding` renamed to `outputColorSpace`, `sRGBEncoding` → `SRGBColorSpace`
-- `r155+`: `CanvasTexture` auto-sets `needsUpdate = true`
-- `r160+`: Import maps deprecated for direct ESM CDN imports
+- **Modern ES Module (r152+)**: Use `renderer.outputColorSpace = THREE.SRGBColorSpace;` and `texture.colorSpace = THREE.SRGBColorSpace;`.
+- **Claude.ai Artifact Sandbox (r128)**: Use `renderer.outputEncoding = THREE.sRGBEncoding;`. Do not use `outputColorSpace`.

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3DSkill — Procedural 3D & Frame-Sequence Scroll Sites</title>
-  <meta name="description" content="Award-winning procedural 3D web motion engine and image-sequence frame scrubber for Claude and AI coding assistants.">
+  <title>3DSkill — Procedural 3D Scroll Sites</title>
+  <meta name="description" content="Art-directed procedural 3D web motion engine for Claude and AI coding assistants. Live WebGL rendered from code with zero video assets.">
   <meta name="theme-color" content="#030712">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,19 +31,16 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Ambient dynamic backdrop glow */
     .glow-sphere {
       position: fixed; border-radius: 50%; filter: blur(140px); pointer-events: none; z-index: 0; opacity: 0.35;
     }
     .glow-1 { top: -10%; left: 15%; width: 550px; height: 550px; background: #0284c7; }
     .glow-2 { bottom: 10%; right: 10%; width: 600px; height: 600px; background: #7c3aed; }
-    .glow-3 { top: 40%; left: 45%; width: 400px; height: 400px; background: #f43f5e; opacity: 0.15; }
 
     .container {
       position: relative; z-index: 10; max-width: 1280px; margin: 0 auto; padding: 4rem 2rem 8rem;
     }
 
-    /* Header */
     header { text-align: center; margin-bottom: 5rem; }
     .badge-pill {
       display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 1rem;
@@ -52,13 +49,13 @@
       letter-spacing: 0.1em; color: var(--accent); margin-bottom: 1.5rem;
     }
     h1 {
-      font-family: 'Outfit', sans-serif; font-size: clamp(2.8rem, 6vw, 4.5rem); font-weight: 900;
+      font-family: 'Outfit', sans-serif; font-size: clamp(2.6rem, 5.5vw, 4.2rem); font-weight: 900;
       line-height: 1.08; letter-spacing: -0.03em; margin-bottom: 1.2rem;
       background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
     .subtitle {
-      max-width: 760px; margin: 0 auto 2.5rem; font-size: clamp(1.1rem, 2vw, 1.35rem);
+      max-width: 760px; margin: 0 auto 2.5rem; font-size: clamp(1.05rem, 1.8vw, 1.25rem);
       line-height: 1.6; color: var(--text-muted);
     }
 
@@ -80,15 +77,13 @@
     }
     .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.25); transform: translateY(-2px); }
 
-    /* Section Headings */
     .section-title {
       font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 800; margin-bottom: 0.6rem;
     }
     .section-desc { color: var(--text-muted); font-size: 1.05rem; margin-bottom: 2.5rem; }
 
-    /* Demo Cards Grid */
     .demo-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 2rem; margin-bottom: 6rem;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; margin-bottom: 6rem;
     }
     .demo-card {
       background: var(--card-bg);
@@ -101,25 +96,19 @@
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       position: relative; overflow: hidden;
     }
-    .demo-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--accent), transparent); opacity: 0; transition: opacity 0.3s ease;
-    }
     .demo-card:hover {
       transform: translateY(-6px);
       border-color: rgba(56, 189, 248, 0.45);
       box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 0 25px rgba(56, 189, 248, 0.12);
     }
-    .demo-card:hover::before { opacity: 1; }
 
     .card-tag {
       font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; text-transform: uppercase;
       letter-spacing: 0.08em; padding: 0.25rem 0.65rem; border-radius: 6px; display: inline-block;
       margin-bottom: 1rem; width: fit-content;
     }
-    .tag-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-    .tag-pink { background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); }
     .tag-amber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .tag-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
     .tag-emerald { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
 
     .demo-card h3 { font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.7rem; color: #ffffff; }
@@ -130,7 +119,6 @@
     }
     .demo-link:hover { text-decoration: underline; }
 
-    /* Reference Matrix */
     .ref-table-wrap {
       background: var(--card-bg); border: 1px solid var(--card-border);
       border-radius: 20px; overflow: hidden; backdrop-filter: blur(16px);
@@ -143,7 +131,6 @@
     td a { color: var(--accent); text-decoration: none; font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; }
     td a:hover { text-decoration: underline; }
 
-    /* Footer */
     footer {
       text-align: center; color: var(--text-muted); font-size: 0.9rem;
       border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 3rem;
@@ -160,82 +147,66 @@
 
   <div class="glow-sphere glow-1"></div>
   <div class="glow-sphere glow-2"></div>
-  <div class="glow-sphere glow-3"></div>
 
   <div class="container">
     
-    <!-- Hero Header -->
     <header>
       <div class="badge-pill">
-        <span>⚡</span> Dual-Engine 3D Motion Architecture
+        <span>⚡</span> Pure Procedural WebGL Motion
       </div>
-      <h1>Procedural 3D & Frame-Sequence Scroll Sites</h1>
+      <h1>Procedural 3D Scroll Sites</h1>
       <p class="subtitle">
-        A production-grade design system and execution engine for building award-winning, 60+ FPS scroll-driven 3D websites. Zero video extraction. 100% code-driven.
+        Real-time GPU-rendered 3D web experiences generated entirely from code. Zero AI video frame extraction. 100% procedural geometry, lighting, and math.
       </p>
 
       <div class="cta-group">
         <a href="#demos" class="btn btn-primary">
-          <span>🚀</span> Launch Interactive Demos
+          <span>🚀</span> Launch Live Demos
         </a>
         <a href="https://github.com/lavjiwellborn/3DSkill" class="btn btn-secondary" target="_blank" rel="noopener">
           <span>⭐️</span> Star on GitHub
         </a>
         <a href="procedural-3d-scroll-sites.skill" download class="btn btn-secondary">
-          <span>📦</span> Download .skill Package
+          <span>📦</span> Download .skill
         </a>
       </div>
     </header>
 
-    <!-- Interactive Demos Section -->
     <section id="demos">
-      <h2 class="section-title">🎨 6 Turnkey Standalone Demos</h2>
-      <p class="section-desc">Click any demo card below to open and test the full-screen live scroll experience in your browser:</p>
+      <h2 class="section-title">🎨 Standalone Procedural 3D Demos</h2>
+      <p class="section-desc">Click any demo card below to test the full-screen live scroll experience in your browser:</p>
 
       <div class="demo-grid">
-        <!-- Demo 1 -->
         <div class="demo-card">
-          <span class="card-tag tag-amber">Mode A • Architectural</span>
+          <span class="card-tag tag-amber">Architectural • Ethereal Dusk</span>
           <h3>Sanctuary at Dusk</h3>
-          <p>3-tier Japanese Pagoda with Sōrin finial, twilight directional cross-lighting, floating embers, and warm plaster lacquer textures.</p>
+          <p>3-tier Japanese Pagoda with Sōrin finial, twilight directional cross-lighting, floating sunset embers, and warm lacquer textures.</p>
           <a href="examples/shrine-at-dusk.html" class="demo-link" target="_blank">Open Live Demo ↗</a>
         </div>
 
-        <!-- Demo 2 -->
         <div class="demo-card">
-          <span class="card-tag tag-blue">Mode A • Sci-Fi High-Rise</span>
+          <span class="card-tag tag-blue">Urban • Nocturne Cityscape</span>
           <h3>Cyberpunk Megastructure</h3>
-          <p>Towering monolith with in-memory procedural canvas window textures, cyan & magenta cross-lighting, and ascending corkscrew flight path.</p>
+          <p>Towering monolith with in-memory procedural canvas window textures, cyan & magenta cross-lighting, and ascending corkscrew camera path.</p>
           <a href="examples/cyberpunk-megastructure.html" class="demo-link" target="_blank">Open Live Demo ↗</a>
         </div>
 
-        <!-- Demo 3 -->
         <div class="demo-card">
-          <span class="card-tag tag-emerald">Mode A • Apple-Style Studio</span>
+          <span class="card-tag tag-emerald">Studio Minimal • Product</span>
           <h3>Apex Luxury Hardware</h3>
           <p>Luxury tech device with extruded rounded unibody aluminum chassis, dual sapphire optics, and clean high-key studio softbox lighting.</p>
           <a href="examples/luxury-product-showcase.html" class="demo-link" target="_blank">Open Live Demo ↗</a>
         </div>
 
-        <!-- Demo 4 -->
         <div class="demo-card">
-          <span class="card-tag tag-pink">Mode B • Frame Scrubber</span>
-          <h3>Image Sequence Scrubber</h3>
-          <p>Zero-stutter frame scrubber that preloads high-definition image frames into RAM with sub-pixel damping and aspect-ratio cover canvas math.</p>
-          <a href="examples/image-sequence-scrubber.html" class="demo-link" target="_blank">Open Live Demo ↗</a>
-        </div>
-
-        <!-- Demo 5 -->
-        <div class="demo-card">
-          <span class="card-tag tag-blue">6-DOF Director</span>
+          <span class="card-tag tag-blue">6-DOF Motion Director</span>
           <h3>Catmull-Rom Spline Flight</h3>
           <p>Camera flight through an architectural complex along a 3D Catmull-Rom spline with lookahead tangent tracking and banking Dutch roll.</p>
           <a href="examples/6dof-camera-flythrough.html" class="demo-link" target="_blank">Open Live Demo ↗</a>
         </div>
 
-        <!-- Demo 6 -->
         <div class="demo-card">
-          <span class="card-tag tag-amber">Advanced Multi-Scene</span>
+          <span class="card-tag tag-amber">Multi-Scene Architectural</span>
           <h3>Drone Aerial Descent</h3>
           <p>Autonomous drone descent through a cyberpunk neon canyon into a hillside modern villa with full HUD telemetry overlay.</p>
           <a href="examples/drone-aerial-descent.html" class="demo-link" target="_blank">Open Live Demo ↗</a>
@@ -243,9 +214,8 @@
       </div>
     </section>
 
-    <!-- Reference Matrix -->
     <section>
-      <h2 class="section-title">📚 13 Comprehensive Reference Guides</h2>
+      <h2 class="section-title">📚 Master Reference Guides</h2>
       <p class="section-desc">Every subsystem has an in-depth, copy-paste-ready reference guide:</p>
 
       <div class="ref-table-wrap">
@@ -258,66 +228,41 @@
           </thead>
           <tbody>
             <tr>
-              <td><a href="references/decision-router.md">references/decision-router.md</a></td>
-              <td><strong>⚡ START HERE</strong>: Prompt classification flowchart routing to exact modes, blueprints, palettes, and build order.</td>
+              <td><a href="references/color-and-lighting.md">references/color-and-lighting.md</a></td>
+              <td><strong>Color & Lighting Discipline</strong>: 60/30/10 rule, anti-cliché ban list, 3 named palettes, ACES tone mapping, warm/cool cross-lighting.</td>
             </tr>
             <tr>
-              <td><a href="references/golden-path-walkthrough.md">references/golden-path-walkthrough.md</a></td>
-              <td><strong>End-to-End Tutorial</strong>: Complete build from user prompt to the final 12-point audit gate.</td>
+              <td><a href="references/procedural-geometry.md">references/procedural-geometry.md</a></td>
+              <td><strong>Geometric Blueprints</strong>: Lathe trick, plan-shape coherence rule, 4 worked blueprints (Pagoda, Tower, Floating Island, Torii Gate).</td>
+            </tr>
+            <tr>
+              <td><a href="references/procedural-materials.md">references/procedural-materials.md</a></td>
+              <td><strong>Zero-Asset Textures</strong>: In-memory Canvas2D textures (wood grain, brushed metal, window facade, roof tiles), PMREMGenerator reflections.</td>
+            </tr>
+            <tr>
+              <td><a href="references/scroll-choreography.md">references/scroll-choreography.md</a></td>
+              <td><strong>Motion & Easing Mechanics</strong>: Damping loop, smoothstep/smootherstep easing, cursor parallax, idle breathing micro-motion.</td>
+            </tr>
+            <tr>
+              <td><a href="references/polish-and-performance.md">references/polish-and-performance.md</a></td>
+              <td><strong>Polish & Performance</strong>: 3-point lighting, shadow catcher, mobile portrait FOV math, zero-allocation render loop, memory disposal.</td>
             </tr>
             <tr>
               <td><a href="references/scaffold-and-overlay.md">references/scaffold-and-overlay.md</a></td>
               <td><strong>Production Scaffolds</strong>: Pre-wired HTML5 & React scaffolds with ACES tone mapping, shadow catcher, and glass cards.</td>
             </tr>
             <tr>
-              <td><a href="references/6dof-scrollytelling-director.md">references/6dof-scrollytelling-director.md</a></td>
-              <td><strong>6-DOF Motion Director</strong>: Dolly, Truck, Pedestal, Pan, Tilt, Roll, Spiral Ascent, Spline Flight, and Vertigo Zoom.</td>
-            </tr>
-            <tr>
-              <td><a href="references/image-sequence-scrubber.md">references/image-sequence-scrubber.md</a></td>
-              <td><strong>Mode B & C Engine</strong>: RAM frame preloader, canvas cover math, DPR retina scaling, and hybrid composition.</td>
-            </tr>
-            <tr>
-              <td><a href="references/procedural-geometry.md">references/procedural-geometry.md</a></td>
-              <td><strong>5 Core Blueprints</strong>: Japanese Pagoda, Sci-Fi Vessel, Cyberpunk Spire, Smart Device, and Floating Island.</td>
-            </tr>
-            <tr>
-              <td><a href="references/advanced-procedural-blueprints.md">references/advanced-procedural-blueprints.md</a></td>
-              <td><strong>6 Advanced Blueprints</strong>: DNA Helix, Concept Supercar, Holo Data Globe, Parthenon, Quantum Reactor, Mountains.</td>
-            </tr>
-            <tr>
-              <td><a href="references/lighting-and-color-palettes.md">references/lighting-and-color-palettes.md</a></td>
-              <td><strong>Curated Palettes</strong>: Ethereal Dusk, Cyberpunk Obsidian, Apple Studio, Deep Sea, and Solar Flare Amber.</td>
-            </tr>
-            <tr>
-              <td><a href="references/procedural-materials-and-textures.md">references/procedural-materials-and-textures.md</a></td>
-              <td><strong>Zero-Asset Textures</strong>: In-memory canvas generators for brushed metal, wood grain, cyber grids, window facades.</td>
-            </tr>
-            <tr>
-              <td><a href="references/scroll-choreography.md">references/scroll-choreography.md</a></td>
-              <td><strong>Motion Design</strong>: Dual-layer damping, smoothstep curves, cursor parallax, and harmonic breathing.</td>
-            </tr>
-            <tr>
-              <td><a href="references/polish-and-performance.md">references/polish-and-performance.md</a></td>
-              <td><strong>Polish & Perf</strong>: ACES tone mapping, 4-point cross-lighting, shadow catcher, mobile portrait FOV math.</td>
-            </tr>
-            <tr>
-              <td><a href="references/scene-templates.md">references/scene-templates.md</a></td>
-              <td><strong>3 Mood Presets</strong>: Ready-to-use configs for Shrine at Dusk, Floating Product, and Night Cityscape.</td>
-            </tr>
-            <tr>
               <td><a href="references/troubleshooting-and-faq.md">references/troubleshooting-and-faq.md</a></td>
-              <td><strong>Diagnostic Matrix</strong>: Instant solutions for black canvas, unclickable buttons, shadow acne, and memory leaks.</td>
+              <td><strong>Diagnostic Matrix</strong>: Fast solutions for blank canvas, camera clipping, unclickable buttons, shadow acne, and memory leaks.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- Footer -->
     <footer>
       <p>
-        Built with ❤️ by <a href="https://github.com/lavjiwellborn" target="_blank" rel="noopener">Lavji Wellborn</a> • Released under the MIT License • <a href="https://github.com/lavjiwellborn/3DSkill" target="_blank" rel="noopener">View Repository on GitHub</a>
+        Built with ❤️ by <a href="https://github.com/lavjiwellborn" target="_blank" rel="noopener">Lavji Wellborn</a> • MIT License • <a href="https://github.com/lavjiwellborn/3DSkill" target="_blank" rel="noopener">View on GitHub</a>
       </p>
     </footer>
 
