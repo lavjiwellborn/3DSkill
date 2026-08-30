@@ -3,9 +3,10 @@
 [![Claude Skill](https://img.shields.io/badge/Claude-Skill-6366f1?style=for-the-badge&logo=anthropic)](https://claude.ai)
 [![Three.js](https://img.shields.io/badge/Three.js-r170+-black?style=for-the-badge&logo=three.js)](https://threejs.org/)
 [![WebGL](https://img.shields.io/badge/WebGL-Live%20Rendered-38bdf8?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API)
+[![Web Audio API](https://img.shields.io/badge/Web%20Audio-Procedural%20Sound-emerald?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)](./LICENSE)
 
-> **Build cinematic, scroll-driven visual web experiences using a high-performance Dual-Engine Architecture: real-time procedural 3D generated live from code (Mode A), ultra-smooth canvas frame-sequence scrubbing with windowed LRU caching and sub-frame alpha crossfading (Mode B), and hybrid compositing (Mode C).**
+> **Build cinematic, scroll-driven visual web experiences using a high-performance Dual-Engine Architecture: real-time procedural 3D generated live from code (Mode A), ultra-smooth canvas frame-sequence scrubbing with windowed LRU caching and sub-frame alpha crossfading (Mode B), and hybrid compositing with real-time WebGL shaders and procedural Web Audio (Mode C).**
 
 ---
 
@@ -23,12 +24,14 @@ To ensure architectural integrity, every project strictly adheres to these decis
 
 | Reference Guide | Core Topic |
 | :--- | :--- |
-| **[`SKILL.md`](./SKILL.md)** | **Master Instruction Manual**: Dual-Engine architecture, mode routing rules, 14-point self-check audit gate, and common failure modes. |
+| **[`SKILL.md`](./SKILL.md)** | **Master Instruction Manual**: Dual-Engine architecture, mode routing rules, 16-point self-check audit gate, and common failure modes. |
 | **[`references/color-and-lighting.md`](./references/color-and-lighting.md)** | **Color & Lighting Discipline**: The 60/30/10 rule, anti-cliché ban list, 3 named starter palettes (*Ethereal Dusk*, *Studio Minimal*, *Nocturne Cityscape*), ACES tone mapping setup with version caveat, and warm/cool cross-lighting. |
 | **[`references/procedural-geometry.md`](./references/procedural-geometry.md)** | **Geometric Blueprints**: Lathe trick for curved profiles, plan-shape coherence rule, and 4 worked blueprints (Japanese Pagoda, Modern Minimalist Tower, Low-Poly Floating Island, Sacred Torii Gate). |
 | **[`references/procedural-materials.md`](./references/procedural-materials.md)** | **Zero-Asset Textures**: In-memory HTML5 Canvas 2D texture generators (wood grain, brushed metal, window facade grid, roof tiles), PMREMGenerator procedural environment reflections, and physical roughness/metalness table. |
 | **[`references/scroll-choreography.md`](./references/scroll-choreography.md)** | **Motion & Easing Mechanics**: Normalized scroll progress driver, first-order IIR damping loop, smoothstep & smootherstep formulas, keyframe timeline interpolation, non-accumulative mouse parallax, and idle breathing micro-motion. |
 | **[`references/frame-sequence-scrubber.md`](./references/frame-sequence-scrubber.md)** | **Mode B & C Frame Scrubber**: Windowed LRU ImageBitmap cache, memory budget formula, manual cover-fit crop math, DPR scaling, sub-frame alpha crossfade blending, video fallback, and typographic depth occlusion. |
+| **[`references/procedural-audio.md`](./references/procedural-audio.md)** | **Zero-Asset Web Audio**: Real-time mathematical sound synthesis (ambient sub-bass drones, scroll-velocity wind modulation, kinetic click resonance, and user gesture unlock). |
+| **[`references/custom-shaders-and-fx.md`](./references/custom-shaders-and-fx.md)** | **Custom GLSL Shaders**: Zero-dependency vertex/fragment shaders for volumetric God Rays, holographic scanlines, procedural caustics, and GPU particle storms. |
 | **[`references/polish-and-performance.md`](./references/polish-and-performance.md)** | **Polish & Performance**: 3-point cross-lighting rig, invisible contact shadow catcher plane, mobile portrait FOV compensation, zero-allocation loop rules, and GPU memory disposal matrix. |
 | **[`references/scaffold-and-overlay.md`](./references/scaffold-and-overlay.md)** | **Complete Scaffolds**: Copy-paste standalone HTML5 and React/Next.js scaffolds for Mode A (Three.js WebGL) and Mode B (Canvas Frame Scrubber) with glassmorphic cards and safety timeouts. |
 | **[`references/troubleshooting-and-faq.md`](./references/troubleshooting-and-faq.md)** | **Diagnostic Matrix**: Fast fixes for blank canvas, camera inside geometry, missing scroll height, unclickable text cards, washed-out colors, mobile portrait clipping, out-of-memory frame crashes, and CORS canvas tainting. |
@@ -45,10 +48,11 @@ Explore the complete standalone HTML examples in [`examples/`](./examples/):
 * **[`examples/6dof-camera-flythrough.html`](./examples/6dof-camera-flythrough.html)**: [Mode A] Catmull-Rom spline camera flying through an architectural complex with lookahead tracking and banking Dutch roll.
 * **[`examples/drone-aerial-descent.html`](./examples/drone-aerial-descent.html)**: [Mode A] Autonomous drone aerial flight through a cyberpunk neon canyon into a hillside villa with full HUD telemetry.
 * **[`examples/frame-sequence-scrubber.html`](./examples/frame-sequence-scrubber.html)**: [Mode B] Aura Dynamics featuring windowed LRU caching, sub-frame alpha crossfade blending, and typographic depth occlusion.
+* **[`examples/hybrid-cinematic-showcase.html`](./examples/hybrid-cinematic-showcase.html)**: [Mode C] Nexus Flagship Hybrid combining 2D canvas frame scrubbing, live WebGL particle shaders, and generative Web Audio.
 
 ---
 
-## 📐 Mandatory 14-Point Self-Check Gate
+## 📐 Mandatory 16-Point Self-Check Gate
 
 ### Mode A (Procedural 3D):
 1. **Squint Silhouette Test**: Does the object read instantly as the intended subject at a glance without reading text?
@@ -67,6 +71,10 @@ Explore the complete standalone HTML examples in [`examples/`](./examples/):
 12. **Cover-Fit Correctness**: Does the frame fill the canvas without stretching at every tested viewport aspect ratio?
 13. **Decode-Fallback Safety**: Does playback degrade gracefully in browsers lacking `createImageBitmap`/`OffscreenCanvas`?
 14. **Mode-Routing Correctness**: Was Mode B/C chosen only because real pre-existing frames/footage were supplied or referenced — never as a workaround for a from-scratch request?
+
+### Audio & Shader Gate Items:
+15. **Audio Safety**: Does procedural Web Audio initialize only after user gesture and ramp gains smoothly to prevent speaker clicks?
+16. **Shader Uniform Cleanliness**: Are all custom shader uniforms (e.g. `uTime`) updated by reference in `animate()` without allocating new objects per frame?
 
 ---
 

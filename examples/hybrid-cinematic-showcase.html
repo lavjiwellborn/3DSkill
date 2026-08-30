@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Nexus Hybrid — Flagship Mode C Demonstration combining a 2D canvas frame-sequence scrubber with a real-time WebGL shader particle field and procedural Web Audio.">
+  <meta name="theme-color" content="#060913">
+  <title>Nexus — Mode C Hybrid Scrollytelling</title>
+  <style>
+    /* ===== RESET & BASE THEME ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #f8fafc;
+      background: #060913;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== LOADING SCREEN ===== */
+    .loading-screen {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #060913;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+    }
+    .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(56, 189, 248, 0.15);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.85s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== LEVEL 1: BACK TYPOGRAPHY (BEHIND CANVAS) ===== */
+    .headline-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(5rem, 18vw, 16rem);
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.035);
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* ===== LEVEL 2: 2D FRAME-SEQUENCE CANVAS ===== */
+    #frame-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* ===== LEVEL 3: 3D WEBGL PARTICLE & SHADER OVERLAY ===== */
+    #webgl-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* ===== LEVEL 4: INTERACTIVE DOM OVERLAY ===== */
+    .scroll-container {
+      position: relative;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .scroll-section {
+      min-height: 125vh;
+      display: flex;
+      align-items: center;
+      padding: 6rem 8%;
+    }
+
+    .scroll-section:nth-child(odd) { justify-content: flex-start; }
+    .scroll-section:nth-child(even) { justify-content: flex-end; }
+    .scroll-section:first-child {
+      justify-content: center;
+      text-align: center;
+      align-items: flex-end;
+      padding-bottom: 16vh;
+    }
+
+    /* ===== GLASSMORPHIC CARDS (WCAG AA COMPLIANT) ===== */
+    .glass-card {
+      max-width: 520px;
+      padding: 2.5rem;
+      background: rgba(10, 15, 30, 0.82);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.05);
+      pointer-events: auto;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-card.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .glass-card h1, .glass-card h2 {
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    }
+
+    .glass-card p {
+      font-size: clamp(1rem, 1.8vw, 1.12rem);
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    /* Floating UI Controls */
+    .hud-controls {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      z-index: 50;
+      display: flex;
+      gap: 0.8rem;
+    }
+
+    .hud-btn {
+      background: rgba(10, 15, 30, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #e2e8f0;
+      font-family: ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      padding: 0.55rem 1.1rem;
+      border-radius: 100px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.25s ease;
+    }
+
+    .hud-btn:hover {
+      border-color: #38bdf8;
+      color: #fff;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+    }
+
+    .hud-btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    .hud-telemetry {
+      position: fixed;
+      bottom: 2rem;
+      left: 2rem;
+      z-index: 20;
+      font-family: ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      color: #38bdf8;
+      background: rgba(10, 15, 30, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 0.5rem 1.1rem;
+      border-radius: 100px;
+      backdrop-filter: blur(12px);
+      pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+      .scroll-section { padding: 4rem 1.5rem; justify-content: center !important; }
+      .glass-card { padding: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #38bdf8; letter-spacing: 0.1em;">CALIBRATING HYBRID PIPELINE</p>
+  </div>
+
+  <!-- Level 1: Backdrop Typography -->
+  <div class="headline-backdrop" id="backdrop-text" aria-hidden="true">NEXUS</div>
+
+  <!-- Level 2: 2D Frame-Sequence Scrubber Canvas -->
+  <canvas id="frame-canvas" role="img" aria-label="Mode B Frame sequence canvas"></canvas>
+
+  <!-- Level 3: 3D WebGL Shader Overlay Canvas -->
+  <canvas id="webgl-canvas" role="img" aria-label="Mode C WebGL shader overlay"></canvas>
+
+  <!-- Level 4: Floating HUD Controls -->
+  <div class="hud-controls">
+    <button class="hud-btn" id="audio-toggle" aria-label="Toggle Procedural Audio">
+      <span id="audio-icon">🔇</span>
+      <span id="audio-label">AUDIO OFF</span>
+    </button>
+  </div>
+
+  <div class="hud-telemetry" id="telemetry-bar">MODE C // HYBRID PIPELINE ACTIVE</div>
+
+  <!-- Level 4: Interactive Narrative Cards -->
+  <main class="scroll-container">
+    <section class="scroll-section">
+      <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
+        <span class="badge">Mode C // Hybrid Engine</span>
+        <h1>Nexus Core</h1>
+        <p>Real-time GPU WebGL particle shaders seamlessly composited over an ultra-smooth 2D canvas frame-sequence scrubber.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Compositing Depth</span>
+        <h2>Multi-Tier Architecture</h2>
+        <p>Backdrop typography sits at Level 1, pre-rendered video frames at Level 2, live WebGL particle storm at Level 3, and interactive glass cards at Level 4.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Generative Audio</span>
+        <h2>Procedural Soundscape</h2>
+        <p>Pure mathematical Web Audio synthesis modulating ambient sub-bass drone and kinetic wind turbulence dynamically as scroll velocity increases.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Zero-Jank Execution</span>
+        <h2>LRU Caching & Shaders</h2>
+        <p>Strict 90MB memory budget with on-demand ImageBitmap decoding and single draw-call GPU particle drift.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Three.js from CDN -->
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+
+    // ==========================================================================
+    // 1. PROCEDURAL AUDIO SYNTHESIZER (ZERO ASSETS)
+    // ==========================================================================
+    class ProceduralAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = true;
+        this.droneGain = null;
+        this.windGain = null;
+        this.windFilter = null;
+      }
+      init() {
+        if (this.ctx) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(0.0, this.ctx.currentTime);
+        this.masterGain.connect(this.ctx.destination);
+
+        // Ambient Sub-Bass Drone
+        const droneFilter = this.ctx.createBiquadFilter();
+        droneFilter.type = 'lowpass';
+        droneFilter.frequency.setValueAtTime(130, this.ctx.currentTime);
+
+        const osc1 = this.ctx.createOscillator();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(55, this.ctx.currentTime);
+
+        const osc2 = this.ctx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(55.3, this.ctx.currentTime);
+
+        this.droneGain = this.ctx.createGain();
+        this.droneGain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+
+        osc1.connect(droneFilter);
+        osc2.connect(droneFilter);
+        droneFilter.connect(this.droneGain);
+        this.droneGain.connect(this.masterGain);
+        osc1.start();
+        osc2.start();
+
+        // Velocity Wind Noise
+        const bufferSize = this.ctx.sampleRate * 2;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const out = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) out[i] = Math.random() * 2 - 1;
+
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        this.windFilter = this.ctx.createBiquadFilter();
+        this.windFilter.type = 'bandpass';
+        this.windFilter.frequency.setValueAtTime(320, this.ctx.currentTime);
+        this.windFilter.Q.setValueAtTime(2.5, this.ctx.currentTime);
+
+        this.windGain = this.ctx.createGain();
+        this.windGain.gain.setValueAtTime(0.0, this.ctx.currentTime);
+
+        whiteNoise.connect(this.windFilter);
+        this.windFilter.connect(this.windGain);
+        this.windGain.connect(this.masterGain);
+        whiteNoise.start();
+      }
+      updateVelocity(v) {
+        if (!this.ctx || this.isMuted) return;
+        const absV = Math.min(1.0, Math.abs(v) * 6.0);
+        const now = this.ctx.currentTime;
+        this.windGain.gain.setTargetAtTime(absV * 0.15, now, 0.08);
+        this.windFilter.frequency.setTargetAtTime(300 + absV * 800, now, 0.08);
+      }
+      toggle() {
+        this.init();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const now = this.ctx.currentTime;
+        if (this.isMuted) {
+          this.masterGain.gain.setTargetAtTime(1.0, now, 0.15);
+          this.isMuted = false;
+        } else {
+          this.masterGain.gain.setTargetAtTime(0.0, now, 0.15);
+          this.isMuted = true;
+        }
+        return !this.isMuted;
+      }
+    }
+
+    const audioEngine = new ProceduralAudioEngine();
+    const audioBtn = document.getElementById('audio-toggle');
+    const audioIcon = document.getElementById('audio-icon');
+    const audioLabel = document.getElementById('audio-label');
+
+    audioBtn.addEventListener('click', () => {
+      const active = audioEngine.toggle();
+      audioBtn.classList.toggle('active', active);
+      audioIcon.textContent = active ? '🔊' : '🔇';
+      audioLabel.textContent = active ? 'AUDIO ON' : 'AUDIO OFF';
+    });
+
+    // ==========================================================================
+    // 2. LEVEL 2: 2D FRAME-SEQUENCE ENGINE (WINDOWED LRU CACHE)
+    // ==========================================================================
+    const TOTAL_FRAMES = 60;
+    const FRAME_W = 1280;
+    const FRAME_H = 720;
+    const frameBlobUrls = [];
+
+    // In-memory procedural frame synthesis for instant standalone run
+    function generateFrames() {
+      const c = document.createElement('canvas');
+      c.width = FRAME_W; c.height = FRAME_H;
+      const ctx = c.getContext('2d');
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const t = i / (TOTAL_FRAMES - 1);
+        ctx.clearRect(0, 0, FRAME_W, FRAME_H);
+
+        const grad = ctx.createRadialGradient(FRAME_W / 2, FRAME_H / 2, 40, FRAME_W / 2, FRAME_H / 2, FRAME_W * 0.55);
+        grad.addColorStop(0, '#0c1a30');
+        grad.addColorStop(1, '#060913');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, FRAME_W, FRAME_H);
+
+        // Core Monolith Ring
+        ctx.save();
+        ctx.translate(FRAME_W / 2, FRAME_H / 2);
+        ctx.rotate(t * Math.PI * 2);
+
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        for (let j = 0; j < 8; j++) {
+          const a = (j / 8) * Math.PI * 2;
+          const r = 160 + Math.sin(a * 4 + t * 5) * 20;
+          const px = Math.cos(a) * r, py = Math.sin(a) * r;
+          if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+
+        frameBlobUrls.push(c.toDataURL('image/webp', 0.85));
+      }
+    }
+    generateFrames();
+
+    class FrameCache {
+      constructor(urls, w = 1280, h = 720, budget = 90 * 1024 * 1024) {
+        this.frameUrls = urls;
+        const maxRes = Math.max(5, Math.floor(budget / (w * h * 4)));
+        this.windowRadius = Math.floor((maxRes - 1) / 2);
+        this.cache = new Map();
+        this.pending = new Map();
+        this.supportsImageBitmap = typeof createImageBitmap === 'function';
+      }
+      async ensureWindow(center) {
+        const lo = Math.max(0, center - this.windowRadius);
+        const hi = Math.min(this.frameUrls.length - 1, center + this.windowRadius);
+        for (let i = lo; i <= hi; i++) {
+          if (!this.cache.has(i) && !this.pending.has(i)) this.pending.set(i, this._decode(i));
+        }
+        for (const i of [...this.cache.keys()]) {
+          if (i < lo || i > hi) {
+            const b = this.cache.get(i);
+            if (b && typeof b.close === 'function') b.close();
+            this.cache.delete(i);
+          }
+        }
+      }
+      async _decode(i) {
+        try {
+          if (this.supportsImageBitmap) {
+            const resp = await fetch(this.frameUrls[i]);
+            const blob = await resp.blob();
+            const bmp = await createImageBitmap(blob);
+            this.cache.set(i, bmp);
+            this.pending.delete(i);
+            return bmp;
+          } else {
+            return new Promise((res, rej) => {
+              const img = new Image();
+              img.onload = () => { this.cache.set(i, img); this.pending.delete(i); res(img); };
+              img.onerror = rej;
+              img.src = this.frameUrls[i];
+            });
+          }
+        } catch (e) { this.pending.delete(i); return null; }
+      }
+      get(i) { return this.cache.get(i) || null; }
+    }
+
+    const frameCanvas = document.getElementById('frame-canvas');
+    const fCtx = frameCanvas.getContext('2d');
+    const frameCache = new FrameCache(frameBlobUrls);
+
+    function resizeFrameCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      frameCanvas.width = window.innerWidth * dpr;
+      frameCanvas.height = window.innerHeight * dpr;
+      fCtx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resizeFrameCanvas);
+    resizeFrameCanvas();
+
+    function drawCover(ctx, src, cw, ch) {
+      const sw = src.width, sh = src.height;
+      const cvA = cw / ch, srcA = sw / sh;
+      let sx, sy, sW, sH;
+      if (srcA > cvA) { sH = sh; sW = sH * cvA; sx = (sw - sW) / 2; sy = 0; }
+      else { sW = sw; sH = sW / cvA; sx = 0; sy = (sh - sH) / 2; }
+      ctx.drawImage(src, sx, sy, sW, sH, 0, 0, cw, ch);
+    }
+
+    function drawSubFrame(ctx, cache, floatIdx, cw, ch) {
+      const max = cache.frameUrls.length - 1;
+      const clamped = Math.max(0, Math.min(max, floatIdx));
+      const lo = Math.floor(clamped), hi = Math.min(lo + 1, max), frac = clamped - lo;
+      const bmpLo = cache.get(lo);
+      if (!bmpLo) return;
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.globalAlpha = 1.0;
+      drawCover(ctx, bmpLo, cw, ch);
+      const bmpHi = cache.get(hi);
+      if (bmpHi && frac > 0.01) {
+        ctx.globalAlpha = frac;
+        drawCover(ctx, bmpHi, cw, ch);
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    // ==========================================================================
+    // 3. LEVEL 3: 3D WEBGL GPU SHADER PARTICLE FIELD (MODE C)
+    // ==========================================================================
+    const glCanvas = document.getElementById('webgl-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas: glCanvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 10);
+
+    // Procedural GLSL Particle Storm
+    const particleCount = 1200;
+    const partGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const offsets = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3]     = (Math.random() - 0.5) * 35;
+      positions[i * 3 + 1] = Math.random() * 25 - 5;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 35;
+
+      offsets[i * 3]     = Math.random() * 10;
+      offsets[i * 3 + 1] = Math.random() * 10;
+      offsets[i * 3 + 2] = Math.random() * 10;
+    }
+
+    partGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    partGeo.setAttribute('aOffset', new THREE.BufferAttribute(offsets, 3));
+
+    const particleMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Color(0x38bdf8) },
+        uTime: { value: 0 },
+        uSize: { value: 3.2 }
+      },
+      vertexShader: `
+        uniform float uTime;
+        uniform float uSize;
+        attribute vec3 aOffset;
+        varying float vAlpha;
+        void main() {
+          vec3 pos = position;
+          pos.x += sin(uTime * 0.4 + aOffset.x) * 1.4;
+          pos.y += cos(uTime * 0.5 + aOffset.y) * 1.0;
+          pos.z += sin(uTime * 0.3 + aOffset.z) * 1.4;
+          vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = uSize * (20.0 / -mvPos.z);
+          gl_Position = projectionMatrix * mvPos;
+          vAlpha = smoothstep(40.0, 4.0, -mvPos.z);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        varying float vAlpha;
+        void main() {
+          vec2 coord = gl_PointCoord - vec2(0.5);
+          float dist = length(coord);
+          if (dist > 0.5) discard;
+          float softEdge = smoothstep(0.5, 0.0, dist);
+          gl_FragColor = vec4(uColor, softEdge * vAlpha * 0.75);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const particles = new THREE.Points(partGeo, particleMat);
+    scene.add(particles);
+
+    function resizeWebGL() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', resizeWebGL);
+
+    // ==========================================================================
+    // 4. SCROLL & MOTION DAMPING LOOP
+    // ==========================================================================
+    let targetProgress = 0, currentProgress = 0;
+    let mouseX = 0, mouseY = 0, curMouseX = 0, curMouseY = 0;
+    let lastScrollY = window.scrollY;
+    const damp = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.25 : 0.08;
+
+    window.addEventListener('scroll', () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      targetProgress = max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
+    }, { passive: true });
+
+    window.addEventListener('pointermove', (e) => {
+      mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+    }, { passive: true });
+
+    const clock = new THREE.Clock();
+    const telemetryBar = document.getElementById('telemetry-bar');
+    const backdropText = document.getElementById('backdrop-text');
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Scroll Damping
+      currentProgress += (targetProgress - currentProgress) * damp;
+      const floatFrame = currentProgress * (TOTAL_FRAMES - 1);
+      frameCache.ensureWindow(Math.round(floatFrame));
+
+      // Level 2: Render 2D Frame Scrubber
+      drawSubFrame(fCtx, frameCache, floatFrame, window.innerWidth, window.innerHeight);
+
+      // Level 3: Render 3D WebGL Shader Overlay
+      particleMat.uniforms.uTime.value = elapsed;
+      curMouseX += (mouseX - curMouseX) * 0.05;
+      curMouseY += (mouseY - curMouseY) * 0.05;
+      camera.position.x = curMouseX * 0.8;
+      camera.position.y = curMouseY * 0.5;
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+
+      // Level 1: Backdrop Text Parallax
+      if (backdropText) {
+        backdropText.style.transform = `translateY(${-(currentProgress - 0.5) * 80}px)`;
+      }
+
+      // Audio Velocity Modulation
+      const scrollVel = (window.scrollY - lastScrollY) / 100;
+      lastScrollY = window.scrollY;
+      audioEngine.updateVelocity(scrollVel);
+
+      // Telemetry
+      if (telemetryBar) {
+        telemetryBar.textContent = `MODE C // FRAME: ${floatFrame.toFixed(1)} // BITMAPS: ${frameCache.cache.size}`;
+      }
+    }
+
+    // Dismiss loader once Level 2 & 3 are initialized
+    const cards = document.querySelectorAll('.glass-card');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('is-visible'); });
+    }, { threshold: 0.2 });
+    cards.forEach(c => observer.observe(c));
+
+    frameCache.ensureWindow(0).then(() => {
+      document.getElementById('loading-screen').classList.add('hidden');
+      animate();
+    });
+
+    setTimeout(() => {
+      const ls = document.getElementById('loading-screen');
+      if (ls && !ls.classList.contains('hidden')) ls.classList.add('hidden');
+    }, 6000);
+  </script>
+</body>
+</html>
