@@ -742,6 +742,7 @@
     renderer.toneMappingExposure = 1.15;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding; // r128 color space (r152+ uses outputColorSpace)
 
     // --------------------------------------------------------------------------
     // 2. PROCEDURAL TEXTURES & MATERIALS

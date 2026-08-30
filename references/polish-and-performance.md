@@ -114,34 +114,15 @@ window.addEventListener('resize', () => handleResponsiveResize(camera, renderer)
 
 ## 5. Procedural Environment Map (PMREMGenerator)
 
-Metallic and glossy materials need an environment map to reflect. Generate one procedurally from virtual light points without downloading HDR files.
+Metallic and glossy materials (`metalness > 0.4`) require an environment map to reflect — without one, they appear flat or black. Generate an in-memory radiance map from a virtual Three.js light scene instead of downloading HDR files.
 
-```js
-function setupProceduralEnvironment(renderer, scene) {
-  const pmremGenerator = new THREE.PMREMGenerator(renderer);
-  pmremGenerator.compileEquirectangularShader();
-
-  const envScene = new THREE.Scene();
-  envScene.background = new THREE.Color(0x0a0e1a);
-  
-  // Virtual light sources to reflect in metallic materials
-  const light1 = new THREE.DirectionalLight(0xfff0dd, 2.0);
-  light1.position.set(5, 5, 5);
-  envScene.add(light1);
-
-  const light2 = new THREE.DirectionalLight(0x38bdf8, 1.5);
-  light2.position.set(-5, 3, -5);
-  envScene.add(light2);
-
-  const envTexture = pmremGenerator.fromScene(envScene, 0.04).texture;
-  scene.environment = envTexture;
-  pmremGenerator.dispose();
-}
-```
+> **Canonical reference**: See [`procedural-materials.md` §3](./procedural-materials.md) for the full `PMREMGenerator` setup recipe, including virtual studio room configuration and cleanup.
 
 ---
 
-## 6. Selective Bloom & Vignette Post-Processing
+## 6. Selective Bloom & Vignette Post-Processing (Optional)
+
+> **Note**: Bloom is an *optional* enhancement — it is **not required** to meet this skill's core quality bar. The 9-point self-check gate can be fully passed without post-processing. Adding `EffectComposer` + `UnrealBloomPass` increases bundle weight and rendering cost; use it only when the scene has emissive elements (lit windows, neon accents) that benefit from glow.
 
 Using Three.js postprocessing (`EffectComposer` + `UnrealBloomPass`) elevates emissive elements (windows, thrusters, neon accents).
 
