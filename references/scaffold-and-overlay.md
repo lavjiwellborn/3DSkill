@@ -552,3 +552,224 @@ export function ProceduralScene() {
   return <div ref={mountRef} />;
 }
 ```
+
+---
+
+## 3. Mode B Standalone HTML5 Frame-Sequence Scaffold (Canvas + Windowed Cache)
+
+Use this copy-paste scaffold when building a **Mode B (Frame-Sequence Scroller)** experience with pre-existing video/image frame assets:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mode B Frame-Sequence Scroller</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #f8fafc;
+      background: #090d16;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    .loading-screen {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #090d16;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+    }
+    .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(56, 189, 248, 0.15);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Level 1: Back Typography */
+    .headline-backdrop {
+      position: fixed; inset: 0; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: clamp(4rem, 15vw, 14rem); font-weight: 900;
+      letter-spacing: -0.05em; color: rgba(255, 255, 255, 0.05);
+      pointer-events: none; user-select: none;
+    }
+
+    /* Level 2: 2D Canvas Viewport */
+    #frame-canvas {
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; display: block; pointer-events: none;
+    }
+
+    /* Level 3: Overlay Scroll Narrative */
+    .scroll-container { position: relative; z-index: 10; pointer-events: none; }
+    .scroll-section { min-height: 100vh; display: flex; align-items: center; padding: 6rem 8%; }
+    .scroll-section:nth-child(odd) { justify-content: flex-start; }
+    .scroll-section:nth-child(even) { justify-content: flex-end; }
+    .scroll-section:first-child { justify-content: center; text-align: center; align-items: flex-end; padding-bottom: 15vh; }
+
+    .glass-card {
+      max-width: 520px; padding: 2.5rem;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      pointer-events: auto; opacity: 0; transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card.is-visible { opacity: 1; transform: translateY(0); }
+    .glass-card h1, .glass-card h2 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; margin-bottom: 1rem; color: #fff; }
+    .glass-card p { font-size: 1.1rem; line-height: 1.7; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+
+  <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #38bdf8; letter-spacing: 0.08em;">LOADING SEQUENCE</p>
+  </div>
+
+  <div class="headline-backdrop">CINEMATIC</div>
+  <canvas id="frame-canvas" role="img" aria-label="Interactive frame sequence"></canvas>
+
+  <main class="scroll-container">
+    <section class="scroll-section">
+      <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
+        <h1>Mode B Scroller</h1>
+        <p>Scroll down to scrub high-fidelity frame sequences smoothly.</p>
+      </div>
+    </section>
+    <section class="scroll-section">
+      <div class="glass-card">
+        <h2>Sub-Frame Smoothing</h2>
+        <p>Adjacent frames blend dynamically to prevent stepped motion.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Configure your frame URLs (e.g. 720p WebP sequence)
+    const frameUrls = Array.from({ length: 60 }, (_, i) => `frames/frame_${String(i).padStart(4, '0')}.webp`);
+
+    class FrameCache {
+      constructor(urls, w = 1280, h = 720, budget = 90 * 1024 * 1024) {
+        this.frameUrls = urls;
+        this.frameWidth = w;
+        this.frameHeight = h;
+        const maxResident = Math.max(5, Math.floor(budget / (w * h * 4)));
+        this.windowRadius = Math.floor((maxResident - 1) / 2);
+        this.cache = new Map();
+        this.pending = new Map();
+        this.supportsImageBitmap = typeof createImageBitmap === 'function';
+      }
+      async ensureWindow(center) {
+        const lo = Math.max(0, center - this.windowRadius);
+        const hi = Math.min(this.frameUrls.length - 1, center + this.windowRadius);
+        for (let i = lo; i <= hi; i++) {
+          if (!this.cache.has(i) && !this.pending.has(i)) this.pending.set(i, this._decode(i));
+        }
+        for (const i of [...this.cache.keys()]) {
+          if (i < lo || i > hi) {
+            const b = this.cache.get(i);
+            if (b && typeof b.close === 'function') b.close();
+            this.cache.delete(i);
+          }
+        }
+      }
+      async _decode(i) {
+        try {
+          if (this.supportsImageBitmap) {
+            const resp = await fetch(this.frameUrls[i]);
+            const blob = await resp.blob();
+            const bmp = await createImageBitmap(blob);
+            this.cache.set(i, bmp);
+            this.pending.delete(i);
+            return bmp;
+          } else {
+            return new Promise((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => { this.cache.set(i, img); this.pending.delete(i); resolve(img); };
+              img.onerror = reject;
+              img.src = this.frameUrls[i];
+            });
+          }
+        } catch (e) { this.pending.delete(i); return null; }
+      }
+      get(i) { return this.cache.get(i) || null; }
+    }
+
+    const canvas = document.getElementById('frame-canvas');
+    const ctx = canvas.getContext('2d');
+    const cache = new FrameCache(frameUrls);
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function drawCover(ctx, src, cw, ch) {
+      const sw = src.width, sh = src.height;
+      const cvA = cw / ch, srcA = sw / sh;
+      let sx, sy, sW, sH;
+      if (srcA > cvA) { sH = sh; sW = sH * cvA; sx = (sw - sW) / 2; sy = 0; }
+      else { sW = sw; sH = sW / cvA; sx = 0; sy = (sh - sH) / 2; }
+      ctx.drawImage(src, sx, sy, sW, sH, 0, 0, cw, ch);
+    }
+
+    function drawSubFrame(ctx, cache, floatIdx, cw, ch) {
+      const max = cache.frameUrls.length - 1;
+      const clamped = Math.max(0, Math.min(max, floatIdx));
+      const lo = Math.floor(clamped), hi = Math.min(lo + 1, max), frac = clamped - lo;
+      const bmpLo = cache.get(lo);
+      if (!bmpLo) return;
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.globalAlpha = 1.0;
+      drawCover(ctx, bmpLo, cw, ch);
+      const bmpHi = cache.get(hi);
+      if (bmpHi && frac > 0.01) {
+        ctx.globalAlpha = frac;
+        drawCover(ctx, bmpHi, cw, ch);
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    let target = 0, current = 0;
+    const damp = prefersReducedMotion ? 0.25 : 0.08;
+    window.addEventListener('scroll', () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      target = max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
+    }, { passive: true });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      current += (target - current) * damp;
+      const floatFrame = current * (frameUrls.length - 1);
+      cache.ensureWindow(Math.round(floatFrame));
+      drawSubFrame(ctx, cache, floatFrame, window.innerWidth, window.innerHeight);
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('is-visible'); });
+    }, { threshold: 0.2 });
+    document.querySelectorAll('.glass-card').forEach(c => observer.observe(c));
+
+    cache.ensureWindow(0).then(() => {
+      document.getElementById('loading-screen').classList.add('hidden');
+      animate();
+    });
+    setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 6000);
+  </script>
+</body>
+</html>
+```
+

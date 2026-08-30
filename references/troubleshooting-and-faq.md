@@ -171,3 +171,24 @@ When building or testing a procedural 3D scroll website, issues can range from c
 | **Texture Encoding** | `texture.colorSpace = THREE.SRGBColorSpace;` | `texture.encoding = THREE.sRGBEncoding;` |
 | **Geometry** | `new THREE.BufferGeometry()` | `new THREE.Geometry()` (Removed) |
 | **Canvas Texture** | `new THREE.CanvasTexture(canvas)` | Requires explicit `.needsUpdate = true` on draw |
+
+---
+
+## 6. Mode B & C (Frame-Sequence & Video Scrubber) Diagnostics
+
+### Issue: "Browser crashes or reloads page on mobile during frame scrubbing"
+* **Diagnosis: Out-of-memory crash from preloading the entire sequence.**
+  * *Fix:* At 1080p, 100 decoded frames consume ~790MB of RAM. Switch to a **Windowed LRU Cache** (`FrameCache`) that keeps only 15–25 frames resident around the active scroll position, and release out-of-window frames using `bitmap.close()`. Default to 720p resolution for web sequences. See `references/frame-sequence-scrubber.md` §3.
+
+### Issue: "Scrubbing feels stepped, choppy, or jumpy at slow scroll speeds"
+* **Diagnosis: Discrete integer frame indexing without sub-frame interpolation.**
+  * *Fix:* Compute continuous fractional frame indices (e.g. `14.35`) and use dual-buffer alpha crossfading between `floor` and `ceil` frames with `drawSubFrame()`.
+
+### Issue: "Canvas throws 'Tainted canvas may not be exported' or frames fail to decode"
+* **Diagnosis: Missing CORS headers on remote CDN frame assets.**
+  * *Fix:* Ensure the hosting server sends `Access-Control-Allow-Origin: *`. If using `fetch()`, pass `{ mode: 'cors' }`. If using `new Image()`, set `img.crossOrigin = 'anonymous'`.
+
+### Issue: "Direct `<video>` scrubbing freezes or lags several seconds behind scroll"
+* **Diagnosis: Asynchronous seek queue saturation.**
+  * *Fix:* Never set `video.currentTime` directly in raw scroll events. Use a seek-locking state machine that waits for the `seeked` event or `requestVideoFrameCallback` before executing subsequent seeks. See `references/frame-sequence-scrubber.md` §5.
+

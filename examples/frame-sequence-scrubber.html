@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Cinematic Frame-Sequence Scrollytelling — Mode B demonstration featuring windowed LRU caching, sub-frame alpha crossfade blending, and typographic depth occlusion.">
+  <meta name="theme-color" content="#090d16">
+  <title>Aura Dynamics — Mode B Frame-Sequence Scroller</title>
+  <style>
+    /* ===== RESET & CORE THEME ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #f8fafc;
+      background: #090d16;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== LOADER SCREEN ===== */
+    .loading-screen {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #090d16;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+    }
+    .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .spinner {
+      width: 46px; height: 46px;
+      border: 3px solid rgba(56, 189, 248, 0.15);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.85s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== LEVEL 1: BACK TYPOGRAPHY (BEHIND CANVAS) ===== */
+    .headline-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(4rem, 16vw, 15rem);
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.04);
+      user-select: none;
+      pointer-events: none;
+      transition: transform 0.1s ease-out;
+    }
+
+    /* ===== LEVEL 2: FRAME-SEQUENCE CANVAS VIEWPORT ===== */
+    #frame-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* ===== LEVEL 3: INTERACTIVE DOM OVERLAY ===== */
+    .scroll-container {
+      position: relative;
+      z-index: 10;
+      pointer-events: none; /* Let scroll pass through */
+    }
+
+    .scroll-section {
+      min-height: 120vh;
+      display: flex;
+      align-items: center;
+      padding: 6rem 8%;
+    }
+
+    .scroll-section:nth-child(odd) { justify-content: flex-start; }
+    .scroll-section:nth-child(even) { justify-content: flex-end; }
+    .scroll-section:first-child {
+      justify-content: center;
+      text-align: center;
+      align-items: flex-end;
+      padding-bottom: 15vh;
+    }
+
+    /* ===== GLASSMORPHIC CARDS (WCAG AA COMPLIANT) ===== */
+    .glass-card {
+      max-width: 520px;
+      padding: 2.5rem;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(56, 189, 248, 0.05);
+      pointer-events: auto; /* Re-enable pointer events */
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-card.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .glass-card h1, .glass-card h2 {
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    }
+
+    .glass-card p {
+      font-size: clamp(1rem, 1.8vw, 1.12rem);
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    /* Telemetry HUD Widget */
+    .hud-counter {
+      position: fixed;
+      bottom: 2rem;
+      left: 2rem;
+      z-index: 20;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: #38bdf8;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 0.5rem 1rem;
+      border-radius: 100px;
+      backdrop-filter: blur(12px);
+      pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+      .scroll-section { padding: 4rem 1.5rem; justify-content: center !important; }
+      .glass-card { padding: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p style="margin-top: 1.2rem; font-size: 0.85rem; color: #38bdf8; letter-spacing: 0.1em;" id="loading-text">INITIALIZING FRAME CACHE</p>
+  </div>
+
+  <!-- Level 1: Back Typography (Behind Subject) -->
+  <div class="headline-backdrop" id="backdrop-text" aria-hidden="true">DYNAMICS</div>
+
+  <!-- Level 2: 2D Accelerated Canvas Viewport -->
+  <canvas id="frame-canvas" role="img" aria-label="Interactive frame-sequence scrub animation"></canvas>
+
+  <!-- Level 3: Overlay Scroll Narrative -->
+  <main class="scroll-container">
+    <section class="scroll-section">
+      <div class="glass-card" style="background: transparent; border: none; box-shadow: none;">
+        <span class="badge">Mode B // Frame Scrubber</span>
+        <h1>Aura Dynamics</h1>
+        <p>Ultra-smooth scroll-driven frame interpolation powered by a windowed LRU cache and sub-frame alpha crossfade blending.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Performance</span>
+        <h2>Windowed LRU Cache</h2>
+        <p>Decodes frames into GPU memory on demand with a strict 100MB memory ceiling. Out-of-window bitmaps are closed immediately to prevent browser memory bloat.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Optical Smoothing</span>
+        <h2>Sub-Frame Crossfading</h2>
+        <p>Fractional frame positions blend adjacent frames with dual-buffer opacity, completely eliminating discrete 30fps stepping during slow scrolls.</p>
+      </div>
+    </section>
+
+    <section class="scroll-section">
+      <div class="glass-card">
+        <span class="badge">Depth Architecture</span>
+        <h2>Typographic Occlusion</h2>
+        <p>Layered multi-tier depth architecture placing giant typography behind the subject and glassmorphic cards in front.</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="hud-counter" id="hud-stats">FRAME: 00.0 // RESIDENT: 0</div>
+
+  <script>
+    // ==========================================================================
+    // 1. IN-MEMORY PROCEDURAL FRAME GENERATOR (FOR INSTANT ZERO-ASSET RUN)
+    // ==========================================================================
+    // Generates 60 high-definition geometric motion frames on the fly.
+    // In production with real assets, replace this array with real image URLs (e.g. frames/frame_0001.webp).
+    const TOTAL_FRAMES = 60;
+    const FRAME_WIDTH = 1280;
+    const FRAME_HEIGHT = 720;
+    const frameBlobUrls = [];
+
+    function generateProceduralFrameSequence() {
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = FRAME_WIDTH;
+      offCanvas.height = FRAME_HEIGHT;
+      const ctx = offCanvas.getContext('2d');
+
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const t = i / (TOTAL_FRAMES - 1);
+        ctx.clearRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+
+        // Dark atmospheric background
+        const grad = ctx.createRadialGradient(
+          FRAME_WIDTH / 2, FRAME_HEIGHT / 2, 50,
+          FRAME_WIDTH / 2, FRAME_HEIGHT / 2, FRAME_WIDTH * 0.6
+        );
+        grad.addColorStop(0, '#0f1d36');
+        grad.addColorStop(1, '#060a12');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+
+        // Geometric core object rotating and morphing
+        const cx = FRAME_WIDTH / 2;
+        const cy = FRAME_HEIGHT / 2;
+        const radius = 180 + Math.sin(t * Math.PI) * 40;
+        const angle = t * Math.PI * 2;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+
+        // Glowing outer rings
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 20;
+
+        ctx.beginPath();
+        for (let j = 0; j < 6; j++) {
+          const a = (j / 6) * Math.PI * 2;
+          const r = radius * (1 + Math.sin(a * 3 + t * 4) * 0.15);
+          const px = Math.cos(a) * r;
+          const py = Math.sin(a) * r;
+          if (j === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Inner glowing core
+        ctx.fillStyle = '#0ea5e9';
+        ctx.beginPath();
+        ctx.arc(0, 0, 60 + Math.sin(t * Math.PI * 2) * 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Convert canvas to Data URL / Blob URL for caching simulation
+        frameBlobUrls.push(offCanvas.toDataURL('image/webp', 0.85));
+      }
+    }
+
+    generateProceduralFrameSequence();
+
+    // ==========================================================================
+    // 2. WINDOWED LRU FRAME CACHE
+    // ==========================================================================
+    class FrameCache {
+      constructor(frameUrls, frameWidth = 1280, frameHeight = 720, memoryBudgetBytes = 90 * 1024 * 1024) {
+        this.frameUrls = frameUrls;
+        this.frameWidth = frameWidth;
+        this.frameHeight = frameHeight;
+
+        // Derived window radius formula
+        const bytesPerFrame = frameWidth * frameHeight * 4;
+        const maxResident = Math.max(5, Math.floor(memoryBudgetBytes / bytesPerFrame));
+        this.windowRadius = Math.floor((maxResident - 1) / 2);
+
+        this.cache = new Map();   // frameIndex -> ImageBitmap | HTMLImageElement
+        this.pending = new Map(); // frameIndex -> Promise
+        this.supportsImageBitmap = typeof createImageBitmap === 'function';
+      }
+
+      async ensureWindow(centerIndex) {
+        const lo = Math.max(0, centerIndex - this.windowRadius);
+        const hi = Math.min(this.frameUrls.length - 1, centerIndex + this.windowRadius);
+
+        // Fetch & decode frames in active window
+        for (let i = lo; i <= hi; i++) {
+          if (!this.cache.has(i) && !this.pending.has(i)) {
+            this.pending.set(i, this._decode(i));
+          }
+        }
+
+        // Release frames outside active window
+        for (const i of [...this.cache.keys()]) {
+          if (i < lo || i > hi) {
+            const item = this.cache.get(i);
+            if (item && typeof item.close === 'function') {
+              item.close(); // Frees decoded GPU buffer
+            }
+            this.cache.delete(i);
+          }
+        }
+      }
+
+      async _decode(i) {
+        try {
+          if (this.supportsImageBitmap) {
+            const resp = await fetch(this.frameUrls[i]);
+            const blob = await resp.blob();
+            const bitmap = await createImageBitmap(blob);
+            this.cache.set(i, bitmap);
+            this.pending.delete(i);
+            return bitmap;
+          } else {
+            return new Promise((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => {
+                this.cache.set(i, img);
+                this.pending.delete(i);
+                resolve(img);
+              };
+              img.onerror = reject;
+              img.src = this.frameUrls[i];
+            });
+          }
+        } catch (err) {
+          this.pending.delete(i);
+          return null;
+        }
+      }
+
+      get(i) {
+        return this.cache.get(i) || null;
+      }
+    }
+
+    const frameCache = new FrameCache(frameBlobUrls, FRAME_WIDTH, FRAME_HEIGHT);
+
+    // ==========================================================================
+    // 3. CANVAS & RENDERING ENGINE
+    // ==========================================================================
+    const canvas = document.getElementById('frame-canvas');
+    const ctx = canvas.getContext('2d');
+    const hudStats = document.getElementById('hud-stats');
+    const backdropText = document.getElementById('backdrop-text');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function setupDPR() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', setupDPR);
+    setupDPR();
+
+    // Manual Cover-Fit Math
+    function drawCover(ctx, source, canvasW, canvasH) {
+      const srcW = source.width;
+      const srcH = source.height;
+      const srcAspect = srcW / srcH;
+      const cvAspect = canvasW / canvasH;
+
+      let sx, sy, sw, sh;
+      if (srcAspect > cvAspect) {
+        sh = srcH;
+        sw = sh * cvAspect;
+        sx = (srcW - sw) / 2;
+        sy = 0;
+      } else {
+        sw = srcW;
+        sh = sw / cvAspect;
+        sx = 0;
+        sy = (srcH - sh) / 2;
+      }
+
+      ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvasW, canvasH);
+    }
+
+    // Sub-Frame Fractional Crossfading
+    function drawSubFrame(ctx, cache, floatIndex, canvasW, canvasH) {
+      const maxIdx = cache.frameUrls.length - 1;
+      const clamped = Math.max(0, Math.min(maxIdx, floatIndex));
+      const lo = Math.floor(clamped);
+      const hi = Math.min(lo + 1, maxIdx);
+      const frac = clamped - lo;
+
+      const bmpLo = cache.get(lo);
+      if (!bmpLo) return; // Hold last paint
+
+      ctx.clearRect(0, 0, canvasW, canvasH);
+
+      ctx.globalAlpha = 1.0;
+      drawCover(ctx, bmpLo, canvasW, canvasH);
+
+      const bmpHi = cache.get(hi);
+      if (bmpHi && frac > 0.01) {
+        ctx.globalAlpha = frac;
+        drawCover(ctx, bmpHi, canvasW, canvasH);
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    // ==========================================================================
+    // 4. SCROLL PROGRESS DRIVER & LERP LOOP
+    // ==========================================================================
+    let targetProgress = 0;
+    let currentProgress = 0;
+    const dampingFactor = prefersReducedMotion ? 0.25 : 0.08;
+
+    function getScrollProgress() {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return 0;
+      return Math.max(0, Math.min(1, window.scrollY / maxScroll));
+    }
+
+    window.addEventListener('scroll', () => {
+      targetProgress = getScrollProgress();
+    }, { passive: true });
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Smooth damping loop
+      currentProgress += (targetProgress - currentProgress) * dampingFactor;
+      const floatFrame = currentProgress * (TOTAL_FRAMES - 1);
+      const centerFrame = Math.round(floatFrame);
+
+      // Windowed cache update
+      frameCache.ensureWindow(centerFrame);
+
+      // Render interpolated sub-frame
+      drawSubFrame(ctx, frameCache, floatFrame, window.innerWidth, window.innerHeight);
+
+      // Parallax backdrop typography
+      if (backdropText) {
+        backdropText.style.transform = `translateY(${-(currentProgress - 0.5) * 80}px)`;
+      }
+
+      // HUD Stats update
+      if (hudStats) {
+        hudStats.textContent = `FRAME: ${floatFrame.toFixed(1)} // RESIDENT: ${frameCache.cache.size}`;
+      }
+    }
+
+    // ==========================================================================
+    // 5. OBSERVER & INITIALIZATION
+    // ==========================================================================
+    const cards = document.querySelectorAll('.glass-card');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) e.target.classList.add('is-visible');
+      });
+    }, { threshold: 0.2 });
+    cards.forEach((c) => observer.observe(c));
+
+    // Dismiss loader once initial window is ready
+    frameCache.ensureWindow(0).then(() => {
+      document.getElementById('loading-screen').classList.add('hidden');
+      animate();
+    });
+
+    // Safety timeout
+    setTimeout(() => {
+      const ls = document.getElementById('loading-screen');
+      if (ls && !ls.classList.contains('hidden')) ls.classList.add('hidden');
+    }, 6000);
+  </script>
+</body>
+</html>
